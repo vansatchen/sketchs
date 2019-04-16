@@ -81,6 +81,10 @@ void loop(){
             client.println();
             
             // turns the GPIOs pwm
+            if (header.indexOf("GET /?off") >= 0) {
+              Serial.println("Light off");
+              ledcAnalogWrite(LEDC_CHANNEL_0, 0);
+            }
             if (header.indexOf("?pwm=") >= 0) {
               header.replace("GET /?pwm=", "");
               header.replace(" HTTP/1.1", "");
