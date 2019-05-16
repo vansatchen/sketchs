@@ -39,7 +39,12 @@ void setup() {
   // set the LED to the last stored state
   ledcSetup(LEDC_CHANNEL_0, LEDC_BASE_FREQ, LEDC_TIMER_13_BIT);
   ledcAttachPin(LED_PIN, LEDC_CHANNEL_0);
-  ledcAnalogWrite(LEDC_CHANNEL_0, ledState);
+  //ledcAnalogWrite(LEDC_CHANNEL_0, ledState);
+  // smooth start
+  for(int rise=0; rise <= ledState; rise++){
+    ledcAnalogWrite(LEDC_CHANNEL_0, rise);
+    delay(4);
+  }
   Serial.println("Led Last State = " +ledState);
   
   // Connect to Wi-Fi network with SSID and password
