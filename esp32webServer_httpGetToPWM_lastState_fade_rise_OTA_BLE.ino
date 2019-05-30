@@ -8,8 +8,8 @@
 #include "BluetoothSerial.h"
 
 // Replace with your network credentials
-const char* ssid     = "";
-const char* password = "";
+#define ssid ""
+#define password ""
 
 BluetoothSerial ESP_BT;
 
@@ -17,15 +17,15 @@ BluetoothSerial ESP_BT;
 long contentLength = 0;
 bool isValidContentType = false;
 String host = "x.x.x.x";
-int port = 80;
-String bin = "/firmware.bin";
+#define port 80
+#define bin "/firmware.bin"
 // Utility to extract header value from headers
 String getHeaderValue(String header, String headerName) {
   return header.substring(strlen(headerName.c_str()));
 }
 
 // Set web server port number to 80
-WiFiServer server(80);
+WiFiServer server(port);
 WiFiClient client;
 
 // Variable to store the HTTP request
@@ -36,10 +36,10 @@ String header;
 #define LEDC_TIMER_13_BIT  13
 #define LEDC_BASE_FREQ     5000
 #define LED_PIN            2
-#define EEPROM_SIZE 1
+#define EEPROM_SIZE        1
 int ledState = 255;
-int brightness = 0;    // how bright the LED is
-int fadeState = 10;
+#define brightness         0    // how bright the LED is
+#define fadeState          10
 
 // BLE
 String incoming;
@@ -148,19 +148,19 @@ void loop(){
                 EEPROM.write(0, pwmval);
                 EEPROM.commit();
 //                Serial.println("State saved in flash memory");
-              } else {
+//              } else {
 //                Serial.println("PWM string not recognised");
               }
             }
             
             // Display the HTML web page
-            client.println("<!DOCTYPE html><html>");
+/*            client.println("<!DOCTYPE html><html>");
             client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-            client.println("<link rel=\"icon\" href=\"data:,\">");
+            client.println("<link rel=\"icon\" href=\"data:,\">");*/
            
             // Web Page Heading
-            client.println("<body><h1>ESP32 Web Server</h1>");
-            client.println("</body></html>");
+/*            client.println("<body><h1>ESP32 Web Server</h1>");
+            client.println("</body></html>");*/
             
             // The HTTP response ends with another blank line
             client.println();
@@ -263,7 +263,7 @@ void execOTA() {
         }
       }
     }
-  } else {
+//  } else {
     // Connect to server failed
 //    Serial.println("Connection to " + String(host) + " failed. Please check your setup");
   }
