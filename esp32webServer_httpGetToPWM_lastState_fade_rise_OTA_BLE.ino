@@ -7,29 +7,31 @@
 #include <EEPROM.h>
 #include "BluetoothSerial.h"
 
+#define FW_VERSION 1000
+
 // Replace with your network credentials
-const char* ssid     = "";
-const char* password = "";
+#define ssid      ""
+#define password  ""
 
 BluetoothSerial ESP_BT;
 
 // For OTA update
 long contentLength = 0;
 bool isValidContentType = false;
-String host = "x.x.x.x";
-int port = 80;
-String bin = "/firmware.bin";
+String host = "";
+#define port 80
+#define phpfile "/update.php"
+#define bin "esp32LedDimmer.bin"
+
 // Utility to extract header value from headers
 String getHeaderValue(String header, String headerName) {
   return header.substring(strlen(headerName.c_str()));
 }
 
-// Set web server port number to 80
-WiFiServer server(80);
+WiFiServer server(port);
 WiFiClient client;
 
-// Variable to store the HTTP request
-String header;
+String header;  // Variable to store the HTTP request
 
 // For ledPWM
 #define LEDC_CHANNEL_0     0
@@ -38,18 +40,14 @@ String header;
 #define LED_PIN            2
 #define EEPROM_SIZE 1
 int ledState = 255;
-int brightness = 0;    // how bright the LED is
-int fadeState = 10;
+#define brightness         0
+#define fadeState          10
 
-// BLE
-String incoming;
+String incoming;  // BT variable
 
 void ledcAnalogWrite(uint8_t channel, uint32_t value, uint32_t valueMax = 255) {
-  // calculate duty, 8191 from 2 ^ 13 - 1
-  uint32_t duty = (8191 / valueMax) * min(value, valueMax);
-
-  // write duty to LEDC
-  ledcWrite(channel, duty);
+  uint32_t duty = (8191 / valueMax) * min(value, valueMax);  // calculate duty, 8191 from 2 ^ 13 - 1
+  ledcWrite(channel, duty);  // write duty to LEDC
 }
 
 void setup() {
@@ -86,11 +84,9 @@ void setup() {
   Serial.println(WiFi.localIP());*/
   server.begin();
 
-  // BLE
-  ESP_BT.begin("ESP32");
+  ESP_BT.begin("");  // BT
 
-  // Execute OTA Update
-  execOTA();
+  execOTA();  // Execute OTA Update
 }
 
 void loop(){
@@ -115,7 +111,7 @@ void loop(){
             client.println("Connection: close");
             client.println();
             
-            // turns the GPIOs pwm. Use variables like off, fade, rise and pwm=N, where N: 1-255
+            // turns the GPIOs pwm. Use variables like off, fade, rise or pwm=N, where N: 1-255
             if (header.indexOf("GET /?off") >= 0) {
 //              Serial.println("Light off");
               ledcAnalogWrite(LEDC_CHANNEL_0, 0);
@@ -148,23 +144,22 @@ void loop(){
                 EEPROM.write(0, pwmval);
                 EEPROM.commit();
 //                Serial.println("State saved in flash memory");
-              } else {
+//              } else {
 //                Serial.println("PWM string not recognised");
               }
             }
             
             // Display the HTML web page
-            client.println("<!DOCTYPE html><html>");
+/*            client.println("<!DOCTYPE html><html>");
             client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
             client.println("<link rel=\"icon\" href=\"data:,\">");
            
             // Web Page Heading
             client.println("<body><h1>ESP32 Web Server</h1>");
-            client.println("</body></html>");
+            client.println("</body></html>");*/
             
             // The HTTP response ends with another blank line
             client.println();
-            // Break out of the while loop
             break;
           } else { // if you got a newline, then clear currentLine
             currentLine = "";
@@ -174,31 +169,22 @@ void loop(){
         }
       }
     }
-    // Clear the header variable
-    header = "";
-    // Close the connection
-    client.stop();
+    header = "";  // Clear the header variable
+    client.stop();  // Close the connection
   }
-  // BLE
+  // BT
   while(ESP_BT.available()){
-    String rcv_str[4];
-    String temp;
     incoming = "";
     for(int i = 0; i < 4; i++) {
-      temp = ESP_BT.read();
-      rcv_str[i] = (String)temp;
-      incoming = incoming + rcv_str[i];
-//      Serial.println(incoming);
+      incoming.concat(ESP_BT.read());
     }
     if (incoming == "10297100101"){ // fade
-//      Serial.println("Light fading");
       for (int i=ledState; i >= fadeState; i-=1){
         ledcAnalogWrite(LEDC_CHANNEL_0, i);
         delay(10);
       }
     }
     if (incoming == "114105115101"){ // rise
-//      Serial.println("Light rising");
       ledcAnalogWrite(LEDC_CHANNEL_0, ledState);
     }
   }
@@ -212,7 +198,7 @@ void execOTA() {
 //    Serial.println("Fetching Bin: " + String(bin));
 
     // Get the contents of the bin file
-    client.print(String("GET ") + bin + " HTTP/1.1\r\n" +
+    client.print(String("GET ") + phpfile + "?file=" + bin + "&" + "FW_VERSION=" + FW_VERSION + " HTTP/1.1\r\n" +
                  "Host: " + host + "\r\n" +
                  "Cache-Control: no-cache\r\n" +
                  "Connection: close\r\n\r\n");
@@ -263,7 +249,7 @@ void execOTA() {
         }
       }
     }
-  } else {
+//  } else {
     // Connect to server failed
 //    Serial.println("Connection to " + String(host) + " failed. Please check your setup");
   }
