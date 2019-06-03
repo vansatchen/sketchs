@@ -20,7 +20,7 @@ long contentLength = 0;
 bool isValidContentType = false;
 String host = "";
 #define port 80
-#define phpfile "/update.php"
+#define phpfile "/UpgradeFW/update.php"
 #define bin "esp32LedDimmer.bin"
 
 // Utility to extract header value from headers
