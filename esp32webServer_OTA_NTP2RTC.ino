@@ -9,13 +9,13 @@
 #define FW_VERSION 1000
 
 // Replace with your network credentials
-#define ssid      "GS_Guest"
-#define password  "Geostra@Ufa"
+#define ssid      ""
+#define password  ""
 
 // For OTA update
 long contentLength = 0;
 bool isValidContentType = false;
-String host = "192.168.1.57";
+String host = "";
 #define port 80
 #define phpfile "/update.php"
 #define bin "esp32FanControl.bin"
