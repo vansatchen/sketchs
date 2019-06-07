@@ -15,10 +15,10 @@
 // For OTA update
 long contentLength = 0;
 bool isValidContentType = false;
-String host = "";
+String host = "192.168.1.57";
 #define port 80
 #define phpfile "/update.php"
-#define bin "esp32FanControl.bin"
+#define bin "esp32WControl.bin"
 
 // Utility to extract header value from headers
 String getHeaderValue(String header, String headerName) {
@@ -37,6 +37,11 @@ const int   daylightOffset_sec = 3600;
 
 // RTC
 RtcDS3231<TwoWire> rtcObject(Wire);
+int previoushour = 0;
+
+// Millis
+/*unsigned long previousMillis = 0;
+const long interval = 10000;*/
 
 void setup() {
   Serial.begin(115200);
@@ -60,75 +65,25 @@ void setup() {
 
   // RTC
   rtcObject.Begin();
-  RtcDateTime currentTime = rtcObject.GetDateTime();
-  char str1[40];
-  sprintf(str1, "%d.%d.%d %d:%d:%d", currentTime.Year(), currentTime.Month(), currentTime.Day(), currentTime.Hour(), currentTime.Minute(), currentTime.Second());
-  Serial.println(str1);
+/*  RtcDateTime currentTime = rtcObject.GetDateTime();
+  char rtcstr[40];
+  sprintf(rtcstr, "%d.%d.%d %d:%d:%d", currentTime.Year(), currentTime.Month(), currentTime.Day(), currentTime.Hour(), currentTime.Minute(), currentTime.Second());
+  Serial.print("Localtime: ");
+  Serial.println(rtcstr);*/
 
-  // NTP
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-  struct tm timeinfo;
-  if(!getLocalTime(&timeinfo)){
-    Serial.println("Failed to obtain time");
-    return;
-  } else {
-    char timeStringBuff[40];
-    strftime(timeStringBuff, sizeof(timeStringBuff), "%u, %Y.%m.%d %H:%M:%S", &timeinfo);
-    Serial.println(timeStringBuff);
-
-    // Set RTC time to NTP time
-    int ntpyear = timeinfo.tm_year;
-    int ntpmon  = timeinfo.tm_mon;
-    int ntpday  = timeinfo.tm_mday;
-    int ntphour = timeinfo.tm_hour;
-    int ntpmin  = timeinfo.tm_min;
-    int ntpsec  = timeinfo.tm_sec;
-    RtcDateTime currentTime = RtcDateTime(ntpyear,ntpmon,ntpday,ntphour,ntpmin,ntpsec);
-    rtcObject.SetDateTime(currentTime);
-  }
+  Serial.println("Setup going to loop");
 }
 
 void loop(){
-  WiFiClient client = server.available();   // Listen for incoming clients
-
-  if (client) {                             // If a new client connects,
-    Serial.println("New Client.");          // print a message out in the serial port
-    String currentLine = "";                // make a String to hold incoming data from the client
-    while (client.connected()) {            // loop while the client's connected
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out the serial monitor
-        header += c;
-        if (c == '\n') {                    // if the byte is a newline character
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
-          if (currentLine.length() == 0) {
-            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-            // and a content-type so the client knows what's coming, then a blank line:
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-type:text/html");
-            client.println("Connection: close");
-            client.println();
-            
-            // turns the GPIOs pwm. Use variables like off, fade, rise or pwm=N, where N: 1-255
-/*            if (header.indexOf("GET /?off") >= 0) {
-              Serial.println("Light off");
-              ledcAnalogWrite(LEDC_CHANNEL_0, 0);
-            }*/
-            
-            // The HTTP response ends with another blank line
-            client.println();
-            break;
-          } else { // if you got a newline, then clear currentLine
-            currentLine = "";
-          }
-        } else if (c != '\r') {  // if you got anything else but a carriage return character,
-          currentLine += c;      // add it to the end of the currentLine
-        }
-      }
-    }
-    header = "";  // Clear the header variable
-    client.stop();  // Close the connection
+  // NTP update every hour
+  RtcDateTime currentTime = rtcObject.GetDateTime();
+  int currenthour = currentTime.Hour();
+  if(currenthour - previoushour >= 1){
+    previoushour = currenthour;
+    Serial.println();
+    Serial.println(currenthour);
+    execNtpUpdate();
+    delay(100);
   }
 }
 
@@ -235,5 +190,33 @@ void execOTA() {
   } else {
     Serial.println("There was no content in the response");
     client.flush();
+  }
+}
+
+// NTP
+void execNtpUpdate(){
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  struct tm timeinfo;
+  for(int i=1; i <= 5; i++){
+    if(getLocalTime(&timeinfo)){
+      char timeStringBuff[40];
+      strftime(timeStringBuff, sizeof(timeStringBuff), "%Y.%m.%d %H:%M:%S", &timeinfo);
+      Serial.print("NTPdate: ");
+      Serial.println(timeStringBuff);
+      // Set NTP time to RTC module
+      int ntpyear = timeinfo.tm_year;
+      int ntpmon  = timeinfo.tm_mon;
+      int ntpday  = timeinfo.tm_mday;
+      int ntphour = timeinfo.tm_hour;
+      int ntpmin  = timeinfo.tm_min;
+      int ntpsec  = timeinfo.tm_sec;
+      RtcDateTime currentTime = RtcDateTime(ntpyear,ntpmon,ntpday,ntphour,ntpmin,ntpsec);
+      rtcObject.SetDateTime(currentTime);
+      Serial.println("Localtime updated");
+      break;
+    } else {
+      Serial.println("Failed to obtain time");
+      delay(1000);
+    }
   }
 }
