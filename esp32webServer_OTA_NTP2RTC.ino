@@ -34,14 +34,21 @@ String header;  // Variable to store the HTTP request
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 14400;
 const int   daylightOffset_sec = 3600;
+#define hour4ntp 3
+#define min4ntp  0
+bool isHour4ntp = false;
 
 // RTC
 RtcDS3231<TwoWire> rtcObject(Wire);
-int previoushour = 0;
+//int previoushour = 0;
 
-// Millis
-/*unsigned long previousMillis = 0;
-const long interval = 10000;*/
+// MQ-2
+#define mqPin 34
+unsigned long previousMillis = 0;
+const long interval = 5000;
+bool isHour4mq = false;
+int patternGaz;
+#define ledPin 2
 
 void setup() {
   Serial.begin(115200);
@@ -65,26 +72,66 @@ void setup() {
 
   // RTC
   rtcObject.Begin();
-/*  RtcDateTime currentTime = rtcObject.GetDateTime();
+  RtcDateTime currentTime = rtcObject.GetDateTime();
   char rtcstr[40];
   sprintf(rtcstr, "%d.%d.%d %d:%d:%d", currentTime.Year(), currentTime.Month(), currentTime.Day(), currentTime.Hour(), currentTime.Minute(), currentTime.Second());
   Serial.print("Localtime: ");
-  Serial.println(rtcstr);*/
+  Serial.println(rtcstr);
+
+  // NTP
+  execNtpUpdate();
+
+  // MQ-2
+  patternGaz = analogRead(mqPin);
+  Serial.print("Gaz pattern: ");
+  Serial.println(patternGaz);
+
+  pinMode(ledPin, OUTPUT);
 
   Serial.println("Setup going to loop");
 }
 
 void loop(){
-  // NTP update every hour
+  // NTP update at 3:00
   RtcDateTime currentTime = rtcObject.GetDateTime();
   int currenthour = currentTime.Hour();
-  if(currenthour - previoushour >= 1){
-    previoushour = currenthour;
-    Serial.println();
-    Serial.println(currenthour);
-    execNtpUpdate();
-    delay(100);
+  int currentmin = currentTime.Minute();
+  if(currenthour == hour4ntp & currentmin == min4ntp){
+    if(!isHour4ntp){
+      execNtpUpdate();
+      delay(100);
+      isHour4ntp = true;
+    }
+  } else {
+    isHour4ntp = false;
   }
+
+  // Set exemplary value from mq-2 per every hours
+  if(currentmin == 0){
+    if(!isHour4mq){
+      patternGaz = analogRead(mqPin);
+      isHour4mq = true;
+      Serial.print("Gaz pattern: ");
+      Serial.println(patternGaz);
+    }
+  } else {
+    isHour4mq = false;
+  }
+  // Getting data from MQ-2
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval){
+    previousMillis = currentMillis;
+    int datchikGaz = analogRead(mqPin);
+    if(datchikGaz - patternGaz >= 100){
+      digitalWrite(ledPin, HIGH);
+      Serial.print("GAZ: ");
+      Serial.println(datchikGaz);
+    } else {
+      digitalWrite(ledPin, LOW);
+    }
+  }
+  
+//  delay(1000);
 }
 
 // OTA Logic 
