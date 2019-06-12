@@ -5,6 +5,7 @@
 #include "time.h"
 #include <Wire.h>
 #include <RtcDS3231.h>
+#include <PCF8591.h>
 
 #define FW_VERSION 1000
 
@@ -15,9 +16,9 @@
 // For OTA update
 long contentLength = 0;
 bool isValidContentType = false;
-String host = "192.168.1.57";
+String host = "192.168.1.159";
 #define port 80
-#define phpfile "/update.php"
+#define phpfile "/UpgradeFW/update.php"
 #define bin "esp32WControl.bin"
 
 // Utility to extract header value from headers
@@ -32,6 +33,7 @@ String header;  // Variable to store the HTTP request
 
 // NTP
 const char* ntpServer = "pool.ntp.org";
+//const char* ntpServer = "192.168.1.159";
 const long  gmtOffset_sec = 14400;
 const int   daylightOffset_sec = 3600;
 #define hour4ntp 3
@@ -51,6 +53,16 @@ bool isHour4mq = false;
 int patternGaz;
 #define ledPin 2
 #define gazDiff 40
+
+// PCF8591
+#define PCF8591_I2C_ADDRESS 0x48
+PCF8591 pcf8591(PCF8591_I2C_ADDRESS);
+
+// HTTP
+bool forceRun = false;
+int timerInt = 0;
+bool timerVal = false;
+unsigned long currentForceRunMillis = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -90,6 +102,9 @@ void setup() {
 
   pinMode(ledPin, OUTPUT);
 
+  // PCF8591
+  pcf8591.begin();
+
   Serial.println("Setup going to loop");
 }
 
@@ -106,11 +121,7 @@ void loop(){
         Serial.write(c);                    // print it out the serial monitor
         header += c;
         if (c == '\n') {                    // if the byte is a newline character
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
           if (currentLine.length() == 0) {
-            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-            // and a content-type so the client knows what's coming, then a blank line:
             client.println("HTTP/1.1 200 OK");
             client.println("Content-type:text/html");
             client.println("Connection: close");
@@ -118,13 +129,48 @@ void loop(){
             
             // turns the GPIOs pwm. Use variables like off, fade, rise and pwm=N, where N: 1-255
             if (header.indexOf("GET /?15on") >= 0) {
-              digitalWrite(ledPin, HIGH);
               Serial.println("ForceRun for 15min ON");
-              execForceRunTimer(15);
+              forceRun = true;
+              timerInt = 15000;
+              timerVal = true;
+              currentForceRunMillis = millis();
             }
-            // The HTTP response ends with another blank line
+            if (header.indexOf("GET /?15off") >= 0) {
+              Serial.println("ForceRun for 15min OFF");
+              forceRun = true;
+              timerInt = 15000;
+              timerVal = false;
+              currentForceRunMillis = millis();
+            }
+            if (header.indexOf("GET /?30on") >= 0) {
+              Serial.println("ForceRun for 30min ON");
+              forceRun = true;
+              timerInt = 30000;
+              timerVal = true;
+              currentForceRunMillis = millis();
+            }
+            if (header.indexOf("GET /?30off") >= 0) {
+              Serial.println("ForceRun for 30min OFF");
+              forceRun = true;
+              timerInt = 30000;
+              timerVal = false;
+              currentForceRunMillis = millis();
+            }
+            if (header.indexOf("GET /?60on") >= 0) {
+              Serial.println("ForceRun for 60min ON");
+              forceRun = true;
+              timerInt = 60000;
+              timerVal = true;
+              currentForceRunMillis = millis();
+            }
+            if (header.indexOf("GET /?60off") >= 0) {
+              Serial.println("ForceRun for 60min OFF");
+              forceRun = true;
+              timerInt = 60000;
+              timerVal = false;
+              currentForceRunMillis = millis();
+            }
             client.println();
-            // Break out of the while loop
             break;
           } else { // if you got a newline, then clear currentLine
             currentLine = "";
@@ -134,12 +180,8 @@ void loop(){
         }
       }
     }
-    // Clear the header variable
     header = "";
-    // Close the connection
     client.stop();
-    Serial.println("Client disconnected.");
-    Serial.println("");
   }
   
   // NTP update at 3:00
@@ -168,8 +210,26 @@ void loop(){
   }
 
   execMQsens();
+  execPCFdata();
 
-  delay(1);
+  if(forceRun){
+    unsigned long currentRunMillis = millis();
+    if(timerVal){
+      digitalWrite(ledPin, HIGH);
+    } else {
+      digitalWrite(ledPin, LOW);
+    }
+    if (currentRunMillis - currentForceRunMillis >= timerInt){
+      Serial.println("Timer is over");
+      if(timerVal){
+        digitalWrite(ledPin, LOW);
+        Serial.println("Led OFF");
+      }
+      forceRun = false;
+    }
+  }
+
+  delay(10);
 }
 
 // OTA Logic 
@@ -322,9 +382,34 @@ void execMQsens(){
   }
 }
 
-void execForceRunTimer(int runTimer){
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= runTimer * 60 * 1000){
-    previousMillis = currentMillis;
-  }
+// Get data from pcf8591
+void execPCFdata(){
+/*  PCF8591::AnalogInput ai = pcf8591.analogReadAll();
+  Serial.print(ai.ain0);
+  Serial.print(" - ");
+  Serial.print(ai.ain1);
+  Serial.print(" - ");
+  Serial.print(ai.ain2);
+  Serial.print(" - ");
+  Serial.println(ai.ain3);
+
+  delay(3000);*/
+
+  int ana = pcf8591.analogRead(AIN0);
+  Serial.print("AIN0 --> ");
+  Serial.println(ana);
+
+  ana = pcf8591.analogRead(AIN1);
+  Serial.print("AIN1 --> ");
+  Serial.println(ana);
+
+  ana = pcf8591.analogRead(AIN2);
+  Serial.print("AIN2 --> ");
+  Serial.println(ana);
+
+  ana = pcf8591.analogRead(AIN3);
+  Serial.print("AIN3 --> ");
+  Serial.println(ana);
+
+  delay(3000);
 }
