@@ -7,11 +7,11 @@
 #include <RtcDS3231.h>
 #include <PCF8591.h>
 
-#define FW_VERSION 1000
+#define FW_VERSION 1001
 
 // Replace with your network credentials
-#define ssid      ""
-#define password  ""
+#define ssid      "ugu"
+#define password  "van_SATCHen"
 
 // For OTA update
 long contentLength = 0;
@@ -65,7 +65,7 @@ bool timerVal = false;
 unsigned long currentForceRunMillis = 0;
 
 // Valves
-#define kran1close 12
+#define kran1close 26
 #define kran1open  14
 #define kran2close 27
 #define kran2open  13
@@ -148,42 +148,42 @@ void loop(){
             if (header.indexOf("GET /?15on") >= 0) {
               Serial.println("ForceRun for 15min ON");
               forceRun = true;
-              timerInt = 15000;
+              timerInt = 900000;
               timerVal = true;
               currentForceRunMillis = millis();
             }
             if (header.indexOf("GET /?15off") >= 0) {
               Serial.println("ForceRun for 15min OFF");
               forceRun = true;
-              timerInt = 15000;
+              timerInt = 900000;
               timerVal = false;
               currentForceRunMillis = millis();
             }
             if (header.indexOf("GET /?30on") >= 0) {
               Serial.println("ForceRun for 30min ON");
               forceRun = true;
-              timerInt = 30000;
+              timerInt = 1800000;
               timerVal = true;
               currentForceRunMillis = millis();
             }
             if (header.indexOf("GET /?30off") >= 0) {
               Serial.println("ForceRun for 30min OFF");
               forceRun = true;
-              timerInt = 30000;
+              timerInt = 1800000;
               timerVal = false;
               currentForceRunMillis = millis();
             }
             if (header.indexOf("GET /?60on") >= 0) {
               Serial.println("ForceRun for 60min ON");
               forceRun = true;
-              timerInt = 60000;
+              timerInt = 3600000;
               timerVal = true;
               currentForceRunMillis = millis();
             }
             if (header.indexOf("GET /?60off") >= 0) {
               Serial.println("ForceRun for 60min OFF");
               forceRun = true;
-              timerInt = 60000;
+              timerInt = 3600000;
               timerVal = false;
               currentForceRunMillis = millis();
             }
