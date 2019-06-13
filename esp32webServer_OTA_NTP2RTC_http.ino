@@ -43,10 +43,8 @@ int currenthour, currentmin;
 
 // RTC
 RtcDS3231<TwoWire> rtcObject(Wire);
-//int previoushour = 0;
 
 // MQ-2
-#define mqPin 34
 unsigned long previousMillis = 0;
 const long interval = 5000;
 bool isHour4mq = false;
@@ -102,9 +100,9 @@ void setup() {
   execNtpUpdate();
 
   // MQ-2
-  patternGaz = analogRead(mqPin);
+/*  patternGaz = analogRead(mqPin);
   Serial.print("Gaz pattern: ");
-  Serial.println(patternGaz);
+  Serial.println(patternGaz);*/
 
   // Fan
   pinMode(ledPin, OUTPUT);
@@ -227,7 +225,6 @@ void loop(){
   }
 
   execMQsens();
-//  execPCFdata();
 
   if(forceRun){
     unsigned long currentRunMillis = millis();
@@ -245,17 +242,6 @@ void loop(){
       forceRun = false;
     }
   }
-
-/*  digitalWrite(kran1close, HIGH);
-  digitalWrite(kran1open, HIGH);
-  digitalWrite(kran2close, HIGH);
-  digitalWrite(kran2open, HIGH);
-  delay(1000);
-  digitalWrite(kran1close, LOW);
-  digitalWrite(kran1open, LOW);
-  digitalWrite(kran2close, LOW);
-  digitalWrite(kran2open, LOW);
-  delay(1000);*/
 
   delay(10);
 }
@@ -392,54 +378,6 @@ void execNtpUpdate(){
       delay(1000);
     }
   }
-}
-
-// Get data from MQ-2
-/*void execMQsens(){
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= interval){
-    previousMillis = currentMillis;
-    int datchikGaz = analogRead(mqPin);
-    if(datchikGaz - patternGaz >= gazDiff){
-      digitalWrite(ledPin, HIGH);
-      Serial.print("GAZ: ");
-      Serial.println(datchikGaz);
-    } else if(datchikGaz <= patternGaz){
-      digitalWrite(ledPin, LOW);
-    }
-  }
-}*/
-
-// Get data from pcf8591
-void execPCFdata(){
-/*  PCF8591::AnalogInput ai = pcf8591.analogReadAll();
-  Serial.print(ai.ain0);
-  Serial.print(" - ");
-  Serial.print(ai.ain1);
-  Serial.print(" - ");
-  Serial.print(ai.ain2);
-  Serial.print(" - ");
-  Serial.println(ai.ain3);
-
-  delay(3000);
-
-  int ana = pcf8591.analogRead(AIN0);
-  Serial.print("AIN0 --> ");
-  Serial.println(ana);
-
-  ana = pcf8591.analogRead(AIN1);
-  Serial.print("AIN1 --> ");
-  Serial.println(ana);
-
-  ana = pcf8591.analogRead(AIN2);
-  Serial.print("AIN2 --> ");
-  Serial.println(ana);
-
-  ana = pcf8591.analogRead(AIN3);
-  Serial.print("AIN3 --> ");
-  Serial.println(ana);*/
-
-  delay(3000);
 }
 
 // Get data from MQ-2
