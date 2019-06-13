@@ -86,7 +86,7 @@ void setup() {
   Serial.println(WiFi.localIP());
   server.begin();
 
-  //execOTA();  // Execute OTA Update
+  execOTA();  // Execute OTA Update
 
   // RTC
   rtcObject.Begin();
