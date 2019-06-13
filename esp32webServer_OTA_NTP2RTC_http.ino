@@ -32,8 +32,8 @@ WiFiClient client;
 String header;  // Variable to store the HTTP request
 
 // NTP
-const char* ntpServer = "pool.ntp.org";
-//const char* ntpServer = "192.168.1.159";
+//const char* ntpServer = "pool.ntp.org";
+const char* ntpServer = "192.168.1.159";
 const long  gmtOffset_sec = 14400;
 const int   daylightOffset_sec = 3600;
 #define hour4ntp 3
@@ -63,6 +63,12 @@ bool forceRun = false;
 int timerInt = 0;
 bool timerVal = false;
 unsigned long currentForceRunMillis = 0;
+
+// Valves
+#define kran1close 12
+#define kran1open  14
+#define kran2close 27
+#define kran2open  13
 
 void setup() {
   Serial.begin(115200);
@@ -100,7 +106,18 @@ void setup() {
   Serial.print("Gaz pattern: ");
   Serial.println(patternGaz);
 
+  // Fan
   pinMode(ledPin, OUTPUT);
+
+  // Valves
+  pinMode(kran1close, OUTPUT);
+  pinMode(kran1open, OUTPUT);
+  pinMode(kran2close, OUTPUT);
+  pinMode(kran2open, OUTPUT);
+  digitalWrite(kran1close, HIGH);
+  digitalWrite(kran1open, HIGH);
+  digitalWrite(kran2close, HIGH);
+  digitalWrite(kran2open, HIGH);
 
   // PCF8591
   pcf8591.begin();
@@ -200,7 +217,7 @@ void loop(){
   // Set exemplary value from mq-2 per every hour
   if(currentmin == 0){
     if(!isHour4mq){
-      patternGaz = analogRead(mqPin);
+      patternGaz = pcf8591.analogRead(AIN0);
       isHour4mq = true;
       Serial.print("Gaz pattern: ");
       Serial.println(patternGaz);
@@ -210,7 +227,7 @@ void loop(){
   }
 
   execMQsens();
-  execPCFdata();
+//  execPCFdata();
 
   if(forceRun){
     unsigned long currentRunMillis = millis();
@@ -228,6 +245,17 @@ void loop(){
       forceRun = false;
     }
   }
+
+/*  digitalWrite(kran1close, HIGH);
+  digitalWrite(kran1open, HIGH);
+  digitalWrite(kran2close, HIGH);
+  digitalWrite(kran2open, HIGH);
+  delay(1000);
+  digitalWrite(kran1close, LOW);
+  digitalWrite(kran1open, LOW);
+  digitalWrite(kran2close, LOW);
+  digitalWrite(kran2open, LOW);
+  delay(1000);*/
 
   delay(10);
 }
@@ -367,7 +395,7 @@ void execNtpUpdate(){
 }
 
 // Get data from MQ-2
-void execMQsens(){
+/*void execMQsens(){
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval){
     previousMillis = currentMillis;
@@ -380,7 +408,7 @@ void execMQsens(){
       digitalWrite(ledPin, LOW);
     }
   }
-}
+}*/
 
 // Get data from pcf8591
 void execPCFdata(){
@@ -393,7 +421,7 @@ void execPCFdata(){
   Serial.print(" - ");
   Serial.println(ai.ain3);
 
-  delay(3000);*/
+  delay(3000);
 
   int ana = pcf8591.analogRead(AIN0);
   Serial.print("AIN0 --> ");
@@ -409,7 +437,23 @@ void execPCFdata(){
 
   ana = pcf8591.analogRead(AIN3);
   Serial.print("AIN3 --> ");
-  Serial.println(ana);
+  Serial.println(ana);*/
 
   delay(3000);
+}
+
+// Get data from MQ-2
+void execMQsens(){
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval){
+    previousMillis = currentMillis;
+    int datchikGaz = pcf8591.analogRead(AIN0);
+    if(datchikGaz - patternGaz >= gazDiff){
+      digitalWrite(ledPin, HIGH);
+      Serial.print("GAZ: ");
+      Serial.println(datchikGaz);
+    } else if(datchikGaz <= patternGaz){
+      digitalWrite(ledPin, LOW);
+    }
+  }
 }
