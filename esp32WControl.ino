@@ -42,6 +42,9 @@ const int   daylightOffset_sec = 3600;
 #define min4ntp  0
 bool isHour4ntp = false;
 int currenthour, currentmin;
+#define hour4valves 4
+#define min4valves  0
+bool isHour4valves = false;
 
 // RTC
 RtcDS3231<TwoWire> rtcObject(Wire);
@@ -121,7 +124,6 @@ void setup() {
   // PCF8591
   delay(1000);
   pcf8591.begin();
-
 }
 
 void loop(){
@@ -189,37 +191,37 @@ void loop(){
             if (header.indexOf("GET /?valve1open") >= 0) {
               Serial.println("Start to open valve1");
               digitalWrite(kran1open, LOW);
-              delay(7000);
+              delay(8000);
               digitalWrite(kran1open, HIGH);
             }
             if (header.indexOf("GET /?valve1close") >= 0) {
               Serial.println("Start to close valve1");
               digitalWrite(kran1close, LOW);
-              delay(7000);
+              delay(8000);
               digitalWrite(kran1close, HIGH);
             }
             if (header.indexOf("GET /?valve1half") >= 0) {
               Serial.println("Start to halfopen valve1");
               digitalWrite(kran1open, LOW);
-              delay(3000);
+              delay(4000);
               digitalWrite(kran1open, HIGH);
             }
             if (header.indexOf("GET /?valve2open") >= 0) {
               Serial.println("Start to open valve2");
               digitalWrite(kran2open, LOW);
-              delay(7000);
+              delay(8000);
               digitalWrite(kran2open, HIGH);
             }
             if (header.indexOf("GET /?valve2close") >= 0) {
               Serial.println("Start to close valve2");
               digitalWrite(kran2close, LOW);
-              delay(7000);
+              delay(8000);
               digitalWrite(kran2close, HIGH);
             }
             if (header.indexOf("GET /?valve2half") >= 0) {
               Serial.println("Start to halfopen valve2");
               digitalWrite(kran2open, LOW);
-              delay(3000);
+              delay(4000);
               digitalWrite(kran2open, HIGH);
             }
             client.println();
@@ -236,7 +238,7 @@ void loop(){
     client.stop();
   }
   
-  // NTP update at 3:00
+  // NTP update at 3:00 and Valve training at 4:00
   RtcDateTime currentTime = rtcObject.GetDateTime();
   int currenthour = currentTime.Hour();
   int currentmin = currentTime.Minute();
@@ -247,6 +249,14 @@ void loop(){
     }
   } else {
     isHour4ntp = false;
+  }
+  if(currenthour == hour4valves & currentmin == min4valves){
+    if(!isHour4valves){
+      execValvesTraining();
+      isHour4valves = true;
+    }
+  } else {
+    isHour4valves = false;
   }
 
   // Set exemplary value from mq-2 per every hour
@@ -415,6 +425,24 @@ void execNtpUpdate(){
       delay(1000);
     }
   }
+}
+
+// Valves training
+void execValvesTraining(){
+  int valve[4] = {kran1open,kran1close,kran2open,kran2close};
+  for(int i=0; i<3; i++){
+    digitalWrite(valve[i], LOW);
+    delay(8000);
+    digitalWrite(valve[i], HIGH);
+    delay(1000);
+  }
+  digitalWrite(valve[0], LOW);
+  delay(4000);
+  digitalWrite(valve[0], HIGH);
+  delay(1000);
+  digitalWrite(valve[2], LOW);
+  delay(4000);
+  digitalWrite(valve[2], HIGH);
 }
 
 // Get data from MQ-2
