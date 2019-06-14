@@ -186,6 +186,42 @@ void loop(){
               timerVal = false;
               currentForceRunMillis = millis();
             }
+            if (header.indexOf("GET /?valve1open") >= 0) {
+              Serial.println("Start to open valve1");
+              digitalWrite(kran1open, LOW);
+              delay(7000);
+              digitalWrite(kran1open, HIGH);
+            }
+            if (header.indexOf("GET /?valve1close") >= 0) {
+              Serial.println("Start to close valve1");
+              digitalWrite(kran1close, LOW);
+              delay(7000);
+              digitalWrite(kran1close, HIGH);
+            }
+            if (header.indexOf("GET /?valve1half") >= 0) {
+              Serial.println("Start to halfopen valve1");
+              digitalWrite(kran1open, LOW);
+              delay(3000);
+              digitalWrite(kran1open, HIGH);
+            }
+            if (header.indexOf("GET /?valve2open") >= 0) {
+              Serial.println("Start to open valve2");
+              digitalWrite(kran2open, LOW);
+              delay(7000);
+              digitalWrite(kran2open, HIGH);
+            }
+            if (header.indexOf("GET /?valve2close") >= 0) {
+              Serial.println("Start to close valve2");
+              digitalWrite(kran2close, LOW);
+              delay(7000);
+              digitalWrite(kran2close, HIGH);
+            }
+            if (header.indexOf("GET /?valve2half") >= 0) {
+              Serial.println("Start to halfopen valve2");
+              digitalWrite(kran2open, LOW);
+              delay(3000);
+              digitalWrite(kran2open, HIGH);
+            }
             client.println();
             break;
           } else { // if you got a newline, then clear currentLine
