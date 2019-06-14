@@ -1,3 +1,5 @@
+#include <BluetoothSerial.h>
+
 // Development by vansatchen.
 
 #include <WiFi.h>
@@ -7,7 +9,7 @@
 #include <RtcDS3231.h>
 #include <PCF8591.h>
 
-#define FW_VERSION 1001
+#define FW_VERSION 1002
 
 // Replace with your network credentials
 #define ssid      ""
@@ -68,6 +70,10 @@ unsigned long currentForceRunMillis = 0;
 #define kran2close 27
 #define kran2open  13
 
+// Domoticz
+String domoserver = "192.168.1.159";
+#define domoport 8080
+
 void setup() {
   Serial.begin(115200);
   
@@ -99,11 +105,6 @@ void setup() {
   // NTP
   execNtpUpdate();
 
-  // MQ-2
-/*  patternGaz = analogRead(mqPin);
-  Serial.print("Gaz pattern: ");
-  Serial.println(patternGaz);*/
-
   // Fan
   pinMode(ledPin, OUTPUT);
 
@@ -118,9 +119,9 @@ void setup() {
   digitalWrite(kran2open, HIGH);
 
   // PCF8591
+  delay(1000);
   pcf8591.begin();
 
-  Serial.println("Setup going to loop");
 }
 
 void loop(){
@@ -386,12 +387,30 @@ void execMQsens(){
   if (currentMillis - previousMillis >= interval){
     previousMillis = currentMillis;
     int datchikGaz = pcf8591.analogRead(AIN0);
+    if (client.connect(domoserver.c_str(), domoport)) {
+      client.print(String("GET ") + "json.htm?type=command&param=udevice&idx=35&nvalue=0&svalue=" + datchikGaz + " HTTP/1.1\r\n" + 
+                   "Host: " + domoserver + "\r\n" +
+                   "Cache-Control: no-cache\r\n" +
+                   "Connection: close\r\n\r\n");
+    }
     if(datchikGaz - patternGaz >= gazDiff){
       digitalWrite(ledPin, HIGH);
       Serial.print("GAZ: ");
       Serial.println(datchikGaz);
+      if (client.connect(domoserver.c_str(), domoport)) {
+        client.print(String("GET ") + "json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=70 HTTP/1.1\r\n" + 
+                   "Host: " + domoserver + "\r\n" +
+                   "Cache-Control: no-cache\r\n" +
+                   "Connection: close\r\n\r\n");
+      }
     } else if(datchikGaz <= patternGaz){
       digitalWrite(ledPin, LOW);
+      if (client.connect(domoserver.c_str(), domoport)) {
+        client.print(String("GET ") + "json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=0 HTTP/1.1\r\n" + 
+                   "Host: " + domoserver + "\r\n" +
+                   "Cache-Control: no-cache\r\n" +
+                   "Connection: close\r\n\r\n");
+      }
     }
   }
 }
