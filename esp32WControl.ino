@@ -9,7 +9,7 @@
 #include <RtcDS3231.h>
 #include <PCF8591.h>
 
-#define FW_VERSION 1002
+#define FW_VERSION 1006
 
 // Replace with your network credentials
 #define ssid      ""
@@ -55,7 +55,7 @@ const long interval = 5000;
 bool isHour4mq = false;
 int patternGaz;
 #define ledPin 2
-#define gazDiff 40
+#define gazDiff 5
 
 // PCF8591
 #define PCF8591_I2C_ADDRESS 0x48
@@ -452,28 +452,44 @@ void execMQsens(){
     previousMillis = currentMillis;
     int datchikGaz = pcf8591.analogRead(AIN0);
     if (client.connect(domoserver.c_str(), domoport)) {
-      client.print(String("GET ") + "json.htm?type=command&param=udevice&idx=35&nvalue=0&svalue=" + datchikGaz + " HTTP/1.1\r\n" + 
-                   "Host: " + domoserver + "\r\n" +
-                   "Cache-Control: no-cache\r\n" +
-                   "Connection: close\r\n\r\n");
+      client.print("GET /json.htm?type=command&param=udevice&idx=35&nvalue=0&svalue=");
+      client.print(datchikGaz);
+      client.println(" HTTP/1.1");
+      client.print("Host: ");
+      client.print(domoserver);
+      client.print(":");
+      client.println(domoport);
+      client.println("Cache-Control: no-cache");
+      client.println("Connection: close");
+      client.println();
     }
     if(datchikGaz - patternGaz >= gazDiff){
       digitalWrite(ledPin, HIGH);
       Serial.print("GAZ: ");
       Serial.println(datchikGaz);
       if (client.connect(domoserver.c_str(), domoport)) {
-        client.print(String("GET ") + "json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=70 HTTP/1.1\r\n" + 
-                   "Host: " + domoserver + "\r\n" +
-                   "Cache-Control: no-cache\r\n" +
-                   "Connection: close\r\n\r\n");
+        client.print("GET /json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=70");
+        client.println(" HTTP/1.1");
+        client.print("Host: ");
+        client.print(domoserver);
+        client.print(":");
+        client.println(domoport);
+        client.println("Cache-Control: no-cache");
+        client.println("Connection: close");
+        client.println();
       }
     } else if(datchikGaz <= patternGaz){
       digitalWrite(ledPin, LOW);
       if (client.connect(domoserver.c_str(), domoport)) {
-        client.print(String("GET ") + "json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=0 HTTP/1.1\r\n" + 
-                   "Host: " + domoserver + "\r\n" +
-                   "Cache-Control: no-cache\r\n" +
-                   "Connection: close\r\n\r\n");
+        client.print("GET /json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=0");
+        client.println(" HTTP/1.1");
+        client.print("Host: ");
+        client.print(domoserver);
+        client.print(":");
+        client.println(domoport);
+        client.println("Cache-Control: no-cache");
+        client.println("Connection: close");
+        client.println();
       }
     }
   }
