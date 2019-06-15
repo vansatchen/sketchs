@@ -9,7 +9,7 @@
 #include <RtcDS3231.h>
 #include <PCF8591.h>
 
-#define FW_VERSION 1006
+#define FW_VERSION 1007
 
 // Replace with your network credentials
 #define ssid      ""
@@ -262,7 +262,7 @@ void loop(){
   // Set exemplary value from mq-2 per every hour
   if(currentmin == 0){
     if(!isHour4mq){
-      patternGaz = pcf8591.analogRead(AIN0);
+      patternGaz = pcf8591.analogRead(AIN2);
       isHour4mq = true;
       Serial.print("Gaz pattern: ");
       Serial.println(patternGaz);
@@ -450,7 +450,7 @@ void execMQsens(){
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval){
     previousMillis = currentMillis;
-    int datchikGaz = pcf8591.analogRead(AIN0);
+    int datchikGaz = pcf8591.analogRead(AIN2);
     if (client.connect(domoserver.c_str(), domoport)) {
       client.print("GET /json.htm?type=command&param=udevice&idx=35&nvalue=0&svalue=");
       client.print(datchikGaz);
