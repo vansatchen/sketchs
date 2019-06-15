@@ -9,7 +9,7 @@
 #include <RtcDS3231.h>
 #include <PCF8591.h>
 
-#define FW_VERSION 1007
+#define FW_VERSION 1009
 
 // Replace with your network credentials
 #define ssid      ""
@@ -271,7 +271,7 @@ void loop(){
     isHour4mq = false;
   }
 
-  execMQsens();
+  execMQsens(patternGaz);
 
   if(forceRun){
     unsigned long currentRunMillis = millis();
@@ -446,14 +446,16 @@ void execValvesTraining(){
 }
 
 // Get data from MQ-2
-void execMQsens(){
+void execMQsens(int patternGazVal){
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval){
     previousMillis = currentMillis;
     int datchikGaz = pcf8591.analogRead(AIN2);
     if (client.connect(domoserver.c_str(), domoport)) {
-      client.print("GET /json.htm?type=command&param=udevice&idx=35&nvalue=0&svalue=");
+      client.print("GET /json.htm?type=command&param=udevice&idx=45&nvalue=&svalue=");
       client.print(datchikGaz);
+      client.print(".");
+      client.print(patternGazVal);
       client.println(" HTTP/1.1");
       client.print("Host: ");
       client.print(domoserver);
@@ -463,7 +465,7 @@ void execMQsens(){
       client.println("Connection: close");
       client.println();
     }
-    if(datchikGaz - patternGaz >= gazDiff){
+    if(datchikGaz - patternGazVal >= gazDiff){
       digitalWrite(ledPin, HIGH);
       Serial.print("GAZ: ");
       Serial.println(datchikGaz);
@@ -478,7 +480,7 @@ void execMQsens(){
         client.println("Connection: close");
         client.println();
       }
-    } else if(datchikGaz <= patternGaz){
+    } else if(datchikGaz <= patternGazVal){
       digitalWrite(ledPin, LOW);
       if (client.connect(domoserver.c_str(), domoport)) {
         client.print("GET /json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=0");
