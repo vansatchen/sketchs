@@ -10,7 +10,7 @@
 #include <RtcDS3231.h>
 #include <PCF8591.h>
 
-#define FW_VERSION 1017
+#define FW_VERSION 1018
 
 // Replace with your network credentials
 #define ssid      ""
@@ -475,34 +475,34 @@ void execMQsens(int patternGazVal){
     if(datchikGaz - patternGazVal >= gazDiff){
       if(!forceRun){
         digitalWrite(ledPin, HIGH);
-      }
-      Serial.print("GAZ: ");
-      Serial.println(datchikGaz);
-      if (client.connect(domoserver.c_str(), domoport)) {
-        client.print("GET /json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=70");
-        client.println(" HTTP/1.1");
-        client.print("Host: ");
-        client.print(domoserver);
-        client.print(":");
-        client.println(domoport);
-        client.println("Cache-Control: no-cache");
-        client.println("Connection: close");
-        client.println();
+        Serial.print("GAZ: ");
+        Serial.println(datchikGaz);
+        if (client.connect(domoserver.c_str(), domoport)) {
+          client.print("GET /json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=70");
+          client.println(" HTTP/1.1");
+          client.print("Host: ");
+          client.print(domoserver);
+          client.print(":");
+          client.println(domoport);
+          client.println("Cache-Control: no-cache");
+          client.println("Connection: close");
+          client.println();
+        }
       }
     } else if(datchikGaz <= patternGazVal){
       if(!forceRun){
         digitalWrite(ledPin, LOW);
-      }
-      if (client.connect(domoserver.c_str(), domoport)) {
-        client.print("GET /json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=0");
-        client.println(" HTTP/1.1");
-        client.print("Host: ");
-        client.print(domoserver);
-        client.print(":");
-        client.println(domoport);
-        client.println("Cache-Control: no-cache");
-        client.println("Connection: close");
-        client.println();
+        if (client.connect(domoserver.c_str(), domoport)) {
+          client.print("GET /json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=0");
+          client.println(" HTTP/1.1");
+          client.print("Host: ");
+          client.print(domoserver);
+          client.print(":");
+          client.println(domoport);
+          client.println("Cache-Control: no-cache");
+          client.println("Connection: close");
+          client.println();
+        }
       }
     }
   }
