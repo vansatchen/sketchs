@@ -10,7 +10,7 @@
 #include <RtcDS3231.h>
 #include <PCF8591.h>
 
-#define FW_VERSION 1013
+#define FW_VERSION 1017
 
 // Replace with your network credentials
 #define ssid      ""
@@ -123,9 +123,9 @@ void setup() {
   digitalWrite(kran2open, HIGH);
 
   // PCF8591
-  delay(1000);
   pcf8591.begin();
-  int patternGaz = pcf8591.analogRead(AIN2);
+  delay(1000);
+  patternGaz = pcf8591.analogRead(AIN2);
 }
 
 void loop(){
@@ -265,7 +265,7 @@ void loop(){
   if(currentmin == 0){
     if(!isHour4mq){
       int newPatternGaz = pcf8591.analogRead(AIN2);
-      if(newPatternGaz - patternGaz >= 15 || patternGaz == 0){  // Pseudo smart detect new pattern for gaz sensor
+      if(newPatternGaz - patternGaz >= 15){  // Pseudo smart detect new pattern for gaz sensor
         Serial.println("New pattern gaz is too big, ignoring");
       } else {
         patternGaz = newPatternGaz;
@@ -459,7 +459,7 @@ void execMQsens(int patternGazVal){
     previousMillis = currentMillis;
     int datchikGaz = pcf8591.analogRead(AIN2);
     if (client.connect(domoserver.c_str(), domoport)) {
-      client.print("GET /json.htm?type=command&param=udevice&idx=45&nvalue=&svalue=");
+      client.print("GET /json.htm?type=command&param=udevice&idx=45&svalue=");
       client.print(datchikGaz);
       client.print(".");
       client.print(patternGazVal);
@@ -473,7 +473,9 @@ void execMQsens(int patternGazVal){
       client.println();
     }
     if(datchikGaz - patternGazVal >= gazDiff){
-      digitalWrite(ledPin, HIGH);
+      if(!forceRun){
+        digitalWrite(ledPin, HIGH);
+      }
       Serial.print("GAZ: ");
       Serial.println(datchikGaz);
       if (client.connect(domoserver.c_str(), domoport)) {
@@ -488,7 +490,9 @@ void execMQsens(int patternGazVal){
         client.println();
       }
     } else if(datchikGaz <= patternGazVal){
-      digitalWrite(ledPin, LOW);
+      if(!forceRun){
+        digitalWrite(ledPin, LOW);
+      }
       if (client.connect(domoserver.c_str(), domoport)) {
         client.print("GET /json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=0");
         client.println(" HTTP/1.1");
