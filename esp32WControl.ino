@@ -1,5 +1,6 @@
-#include <BluetoothSerial.h>
-
+// Sketch for control fan and 2 valves, with tranning valves.
+// Allows control fan and valves using GET requests like http://x.x.x.x/?30on to start fan for 30 min
+// and http://x.x.x.x/?valve2close to close valve 2.
 // Development by vansatchen.
 
 #include <WiFi.h>
@@ -9,7 +10,7 @@
 #include <RtcDS3231.h>
 #include <PCF8591.h>
 
-#define FW_VERSION 1009
+#define FW_VERSION 1013
 
 // Replace with your network credentials
 #define ssid      ""
@@ -124,6 +125,7 @@ void setup() {
   // PCF8591
   delay(1000);
   pcf8591.begin();
+  int patternGaz = pcf8591.analogRead(AIN2);
 }
 
 void loop(){
@@ -262,10 +264,15 @@ void loop(){
   // Set exemplary value from mq-2 per every hour
   if(currentmin == 0){
     if(!isHour4mq){
-      patternGaz = pcf8591.analogRead(AIN2);
-      isHour4mq = true;
-      Serial.print("Gaz pattern: ");
-      Serial.println(patternGaz);
+      int newPatternGaz = pcf8591.analogRead(AIN2);
+      if(newPatternGaz - patternGaz >= 15 || patternGaz == 0){  // Pseudo smart detect new pattern for gaz sensor
+        Serial.println("New pattern gaz is too big, ignoring");
+      } else {
+        patternGaz = newPatternGaz;
+        isHour4mq = true;
+        Serial.print("Gaz pattern: ");
+        Serial.println(patternGaz);
+      }
     }
   } else {
     isHour4mq = false;
