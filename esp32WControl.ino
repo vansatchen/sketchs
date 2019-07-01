@@ -10,7 +10,7 @@
 #include <RtcDS3231.h>
 #include <PCF8591.h>
 
-#define FW_VERSION 1018
+#define FW_VERSION 1019
 
 // Replace with your network credentials
 #define ssid      ""
@@ -57,6 +57,7 @@ bool isHour4mq = false;
 int patternGaz;
 #define ledPin 2
 #define gazDiff 5
+bool isFanOn = false;
 
 // PCF8591
 #define PCF8591_I2C_ADDRESS 0x48
@@ -472,11 +473,10 @@ void execMQsens(int patternGazVal){
       client.println("Connection: close");
       client.println();
     }
-    if(datchikGaz - patternGazVal >= gazDiff){
-      if(!forceRun){
+    if(datchikGaz - patternGazVal >= gazDiff){ //turn fan on
+      if((!forceRun) and (!isFanOn)){
         digitalWrite(ledPin, HIGH);
-        Serial.print("GAZ: ");
-        Serial.println(datchikGaz);
+        isFanOn = true;
         if (client.connect(domoserver.c_str(), domoport)) {
           client.print("GET /json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=70");
           client.println(" HTTP/1.1");
@@ -489,9 +489,10 @@ void execMQsens(int patternGazVal){
           client.println();
         }
       }
-    } else if(datchikGaz <= patternGazVal){
-      if(!forceRun){
+    } else if(datchikGaz <= patternGazVal){ //turn fan off
+      if((!forceRun) and (isFanOn)){
         digitalWrite(ledPin, LOW);
+        isFanOn = false;
         if (client.connect(domoserver.c_str(), domoport)) {
           client.print("GET /json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=0");
           client.println(" HTTP/1.1");
