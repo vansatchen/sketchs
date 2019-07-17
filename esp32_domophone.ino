@@ -64,8 +64,9 @@ void loop() {
   callState = digitalRead(callDetect);
   if(callState){ // If calling
     digitalWrite(answerPin, HIGH); // Answer the call
-    delay(1000);
+    delay(2500);
     digitalWrite(answerPin, LOW); // Reset the call
+    delay(500);
   }
   
   // NTP update at 3:00
