@@ -1,3 +1,6 @@
+// Sketch for control domophone like Cyfral.
+// Allows accept calls and reset or open door.
+
 #include <WiFi.h>
 #include "time.h"
 #include <RtcDS3231.h>
@@ -18,10 +21,12 @@ int currenthour, currentmin;
 
 RtcDS3231<TwoWire> rtcObject(Wire); // RTC
 
-#define dfRelay 33 // Pin for relay
+#define dfRelay 33 // Pin for relay to take control of calls
 #define callDetect 17 // Pin for detect calling
-#define answerPin 16
+#define answerPin 16 // Pin for relay to switch to answer
+#define openPin 15 // Pin for open door
 bool callState = false;
+bool doorToClose = true;
 
 void setup() {
   pinMode(dfRelay, OUTPUT);
@@ -29,6 +34,8 @@ void setup() {
   pinMode(callDetect, INPUT);
   pinMode(answerPin, OUTPUT);
   digitalWrite(answerPin, LOW); // Wait for call
+  pinMode(openPin, OUTPUT);
+  digitalWrite(openPin, LOW); // Door closed
 
   Serial.begin(115200);
 
@@ -63,10 +70,13 @@ void loop() {
   // Detect calling
   callState = digitalRead(callDetect);
   if(callState){ // If calling
-    digitalWrite(answerPin, HIGH); // Answer the call
-    delay(2500);
-    digitalWrite(answerPin, LOW); // Reset the call
-    delay(500);
+    if(doorToClose){
+      momentClose();
+      doorToClose = false;
+    } else {
+      momentOpen();
+      doorToClose = true;
+    }
   }
   
   // NTP update at 3:00
@@ -111,4 +121,20 @@ void execNtpUpdate(){
       delay(1000);
     }
   }
+}
+
+void momentClose(){
+  digitalWrite(answerPin, HIGH); // Answer the call
+  delay(2500);
+  digitalWrite(answerPin, LOW); // Reset the call
+  delay(500);
+}
+
+void momentOpen(){
+  digitalWrite(answerPin, HIGH); // Answer the call
+  delay(2500);
+  digitalWrite(openPin, HIGH); // Open door
+  delay(2000);
+  digitalWrite(openPin, LOW);
+  digitalWrite(answerPin, LOW);
 }
