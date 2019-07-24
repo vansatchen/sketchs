@@ -7,6 +7,11 @@
 #include <Wire.h>
 #include <Update.h>
 
+/*#include "AudioFileSourcePROGMEM.h"
+#include "AudioGeneratorWAV.h"
+#include "AudioOutputI2S.h"
+#include "sound.h"*/
+
 #define FW_VERSION 1000
 
 // Replace with your network credentials
@@ -32,7 +37,7 @@ WiFiClient client;
 String header;  // Variable to store the HTTP request
 
 // NTP
-const char* ntpServer = "pool.ntp.org";
+const char* ntpServer = "192.168.1.159";
 const long  gmtOffset_sec = 14400;
 const int   daylightOffset_sec = 3600;
 #define hour4ntp 3
@@ -59,6 +64,11 @@ bool forceRunNMOff = false;
 // Domoticz
 String domoserver = "192.168.1.159";
 #define domoport 8080
+
+// Sound
+/*AudioGeneratorWAV *wav;
+AudioFileSourcePROGMEM *file;
+AudioOutputI2S *out;*/
 
 void setup() {
   pinMode(dfRelay, OUTPUT);
@@ -99,6 +109,12 @@ void setup() {
 
   // NTP
   execNtpUpdate();
+
+  // Sound
+/*  file = new AudioFileSourcePROGMEM( sound, sizeof(sound) );
+  out = new AudioOutputI2S(0, 1);
+  wav = new AudioGeneratorWAV();
+  wav->begin(file, out);*/
 }
 
 void loop() {
@@ -352,6 +368,12 @@ void momentOpen(){
   digitalWrite(openPin, LOW);
   digitalWrite(answerPin, LOW);
 }
+
+/*void soundWithReset(){
+  if (wav->isRunning()) {
+    if (!wav->loop()) wav->stop();
+  }
+}*/
 
 void domoSWToOff(){
   if (client.connect(domoserver.c_str(), domoport)) {
