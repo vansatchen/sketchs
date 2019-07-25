@@ -15,8 +15,8 @@
 #define FW_VERSION 1000
 
 // Replace with your network credentials
-#define ssid      ""
-#define password  ""
+#define ssid      "ugu"
+#define password  "van_SATCHen"
 
 // For OTA update
 long contentLength = 0;
@@ -54,8 +54,8 @@ RtcDS3231<TwoWire> rtcObject(Wire); // RTC
 #define openPin 15 // Pin for open door
 bool callState = false;
 
-#define nightModeOn 0
-#define nightModeOff 9
+#define nightModeOn 20
+#define nightModeOff 23
 bool nightMode = false;
 
 // HTTP
@@ -191,8 +191,12 @@ void loop() {
     digitalWrite(dfRelay, HIGH);
     callState = digitalRead(callDetect);
     if(callState){ // If calling
+      digitalWrite(answerPin, HIGH); // Answer the call
+      delay(2500);
       soundStop = false;
       soundWithReset();
+      digitalWrite(answerPin, LOW); // Reset the call
+      delay(500);
     }
   } else {
     digitalWrite(dfRelay, LOW);
