@@ -7,10 +7,10 @@
 #include <Wire.h>
 #include <Update.h>
 
-/*#include "AudioFileSourcePROGMEM.h"
+#include "AudioFileSourcePROGMEM.h"
 #include "AudioGeneratorWAV.h"
 #include "AudioOutputI2S.h"
-#include "sound.h"*/
+#include "sound.h"
 
 #define FW_VERSION 1000
 
@@ -37,7 +37,8 @@ WiFiClient client;
 String header;  // Variable to store the HTTP request
 
 // NTP
-const char* ntpServer = "192.168.1.159";
+//const char* ntpServer = "192.168.1.159";
+const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 14400;
 const int   daylightOffset_sec = 3600;
 #define hour4ntp 3
@@ -66,9 +67,10 @@ String domoserver = "192.168.1.159";
 #define domoport 8080
 
 // Sound
-/*AudioGeneratorWAV *wav;
+AudioGeneratorWAV *wav;
 AudioFileSourcePROGMEM *file;
-AudioOutputI2S *out;*/
+AudioOutputI2S *out;
+bool soundStop = true;
 
 void setup() {
   pinMode(dfRelay, OUTPUT);
@@ -111,10 +113,9 @@ void setup() {
   execNtpUpdate();
 
   // Sound
-/*  file = new AudioFileSourcePROGMEM( sound, sizeof(sound) );
+  file = new AudioFileSourcePROGMEM( sound, sizeof(sound) );
   out = new AudioOutputI2S(0, 1);
   wav = new AudioGeneratorWAV();
-  wav->begin(file, out);*/
 }
 
 void loop() {
@@ -160,6 +161,13 @@ void loop() {
               digitalWrite(dfRelay, LOW); // Switch line back to native domophone
               domoSWToOff();
             }
+            if (header.indexOf("GET /?answer") >= 0) {
+              Serial.println("Answering the call");
+              digitalWrite(dfRelay, HIGH); // Switch line to our gadget
+              soundStop = false;
+              soundWithReset();
+              digitalWrite(dfRelay, LOW); // Switch line back to native domophone
+            }
 
             client.println();
             break;
@@ -183,7 +191,8 @@ void loop() {
     digitalWrite(dfRelay, HIGH);
     callState = digitalRead(callDetect);
     if(callState){ // If calling
-      momentClose();
+      soundStop = false;
+      soundWithReset();
     }
   } else {
     digitalWrite(dfRelay, LOW);
@@ -369,11 +378,18 @@ void momentOpen(){
   digitalWrite(answerPin, LOW);
 }
 
-/*void soundWithReset(){
-  if (wav->isRunning()) {
-    if (!wav->loop()) wav->stop();
+void soundWithReset(){
+  file = new AudioFileSourcePROGMEM( sound, sizeof(sound) );
+  while(!soundStop){
+    wav->begin(file, out);
+    if (wav->isRunning()) {
+      if (!wav->loop()){
+        wav->stop();
+        soundStop = true;
+      }
+    }
   }
-}*/
+}
 
 void domoSWToOff(){
   if (client.connect(domoserver.c_str(), domoport)) {
