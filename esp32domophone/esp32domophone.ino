@@ -37,8 +37,8 @@ WiFiClient client;
 String header;  // Variable to store the HTTP request
 
 // NTP
-//const char* ntpServer = "192.168.1.159";
-const char* ntpServer = "pool.ntp.org";
+const char* ntpServer = "192.168.1.159";
+//const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 14400;
 const int   daylightOffset_sec = 3600;
 #define hour4ntp 3
@@ -54,8 +54,8 @@ RtcDS3231<TwoWire> rtcObject(Wire); // RTC
 #define openPin 15 // Pin for open door
 bool callState = false;
 
-#define nightModeOn 18
-#define nightModeOff 23
+#define nightModeOn 0
+#define nightModeOff 10
 bool nightMode = false;
 
 // HTTP
@@ -195,12 +195,13 @@ void loop() {
     digitalWrite(dfRelay, HIGH);
     callState = digitalRead(callDetect);
     if(callState){ // If calling
-      digitalWrite(answerPin, HIGH); // Answer the call
-      delay(2500);
+//      digitalWrite(answerPin, HIGH); // Answer the call
+//      delay(2500);
       soundStop = false;
-      playSound();
-      digitalWrite(answerPin, LOW); // Reset the call
-      delay(500);
+//      playSound();
+      momentClose();
+//      digitalWrite(answerPin, LOW); // Reset the call
+//      delay(500);
     }
   } else {
     digitalWrite(dfRelay, LOW);
