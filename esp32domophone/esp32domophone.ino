@@ -15,8 +15,8 @@
 #define FW_VERSION 1000
 
 // Replace with your network credentials
-#define ssid      ""
-#define password  ""
+#define ssid      "ugu"
+#define password  "van_SATCHen"
 
 // For OTA update
 long contentLength = 0;
@@ -54,7 +54,7 @@ RtcDS3231<TwoWire> rtcObject(Wire); // RTC
 #define openPin 15 // Pin for open door
 bool callState = false;
 
-#define nightModeOn 20
+#define nightModeOn 18
 #define nightModeOff 23
 bool nightMode = false;
 
@@ -164,8 +164,12 @@ void loop() {
             if (header.indexOf("GET /?answer") >= 0) {
               Serial.println("Answering the call");
               digitalWrite(dfRelay, HIGH); // Switch line to our gadget
+              digitalWrite(answerPin, HIGH); // Answer the call
+              delay(2500);
               soundStop = false;
-              soundWithReset();
+              playSound();
+              digitalWrite(answerPin, LOW); // Reset the call
+              delay(500);
               digitalWrite(dfRelay, LOW); // Switch line back to native domophone
             }
 
@@ -194,7 +198,7 @@ void loop() {
       digitalWrite(answerPin, HIGH); // Answer the call
       delay(2500);
       soundStop = false;
-      soundWithReset();
+      playSound();
       digitalWrite(answerPin, LOW); // Reset the call
       delay(500);
     }
@@ -357,7 +361,7 @@ void execNtpUpdate(){
 void checkForNM(){
   RtcDateTime currentTime = rtcObject.GetDateTime();
   int currenthour = currentTime.Hour();
-  if(currenthour >= nightModeOn & currenthour <= nightModeOff){
+  if(currenthour >= nightModeOn & currenthour < nightModeOff){
     nightMode = true;
 //    forceRunNMOff = false;
   } else {
@@ -382,7 +386,7 @@ void momentOpen(){
   digitalWrite(answerPin, LOW);
 }
 
-void soundWithReset(){
+void playSound(){
   file = new AudioFileSourcePROGMEM( sound, sizeof(sound) );
   while(!soundStop){
     wav->begin(file, out);
