@@ -11,7 +11,7 @@
 #include <Wire.h>
 #include <Update.h>
 
-#define FW_VERSION 1001
+#define FW_VERSION 1006
 
 // Replace with your network credentials
 #define ssid      ""
@@ -59,6 +59,8 @@ int callsCount = 0;
 unsigned long callFirstTimeMillis = 0;
 const long callInterval = 15000;
 bool callFirstTime = true;
+bool forceNightMode = false;
+bool forceDayMode = false;
 
 // HTTP
 bool forceRunNMOn = false;
@@ -130,13 +132,13 @@ void loop() {
 
             if (header.indexOf("GET /?night") >= 0) {
               Serial.println("Night Mode On");
-              nightMode = true;
-              forceRunNMOn = true;
+              forceNightMode = true;
+              forceDayMode = false;
             }
             if (header.indexOf("GET /?day") >= 0) {
               Serial.println("Night Mode Off");
-              nightMode = false;
-              forceRunNMOff = true;
+              forceDayMode = true;
+              forceNightMode = false;
             }
             if (header.indexOf("GET /?open") >= 0) {
               Serial.println("Opening door");
@@ -180,7 +182,7 @@ void loop() {
     unsigned long currentCCMillis = millis(); // Take current millis
     if(callFirstTime){ // Check if first signal
       callsCount++; // Add +1 to call counter
-      domoCallingCount(); // Send message
+      domoCallCount(callsCount); // Send message
       callFirstTimeMillis = currentCCMillis; 
       callFirstTime = false; // Uncheck first signal
     }
@@ -356,10 +358,10 @@ void checkForNM(){
   int currenthour = currentTime.Hour();
   if(currenthour >= nightModeOn & currenthour < nightModeOff){
     nightMode = true;
-//    forceRunNMOff = false;
+    forceNightMode = false;
   } else {
     nightMode = false;
-//    forceRunNMOn = false;
+    forceDayMode = false;
   }
 }
 
@@ -393,10 +395,10 @@ void domoSWToOff(){
   }
 }
 
-void domoCallingCount(){
+void domoCallCount(int callsCountVar){
   if (client.connect(domoserver.c_str(), domoport)) {
     client.print("GET /json.htm?type=command&param=udevice&idx=47&svalue=");
-    client.print(callsCount);
+    client.print(callsCountVar);
     client.println(" HTTP/1.1");
     client.print("Host: ");
     client.print(domoserver);
