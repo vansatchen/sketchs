@@ -1,5 +1,9 @@
 // Sketch for control domophone like Cyfral.
-// Allows accept calls and reset or open door.
+// Allows accept calls and reset or open door via GET requests.
+// Available night mode starting at nightModeOn variable with reseting all calls until nightModeOff variable.
+// Included calls count and send it to domoticz.
+// OTA update and ntp synchronization also included.
+// developed by vansatchen.
 
 #include <WiFi.h>
 #include "time.h"
@@ -7,12 +11,7 @@
 #include <Wire.h>
 #include <Update.h>
 
-#include "AudioFileSourcePROGMEM.h"
-#include "AudioGeneratorWAV.h"
-#include "AudioOutputI2S.h"
-#include "sound.h"
-
-#define FW_VERSION 1000
+#define FW_VERSION 1001
 
 // Replace with your network credentials
 #define ssid      ""
@@ -38,7 +37,6 @@ String header;  // Variable to store the HTTP request
 
 // NTP
 const char* ntpServer = "192.168.1.159";
-//const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 14400;
 const int   daylightOffset_sec = 3600;
 #define hour4ntp 3
@@ -52,11 +50,15 @@ RtcDS3231<TwoWire> rtcObject(Wire); // RTC
 #define callDetect 17 // Pin for detect calling
 #define answerPin 16 // Pin for relay to switch to answer
 #define openPin 15 // Pin for open door
-bool callState = false;
+bool callIsActive = false;
 
 #define nightModeOn 0
 #define nightModeOff 10
 bool nightMode = false;
+int callsCount = 0;
+unsigned long callFirstTimeMillis = 0;
+const long callInterval = 15000;
+bool callFirstTime = true;
 
 // HTTP
 bool forceRunNMOn = false;
@@ -65,12 +67,6 @@ bool forceRunNMOff = false;
 // Domoticz
 String domoserver = "192.168.1.159";
 #define domoport 8080
-
-// Sound
-AudioGeneratorWAV *wav;
-AudioFileSourcePROGMEM *file;
-AudioOutputI2S *out;
-bool soundStop = true;
 
 void setup() {
   pinMode(dfRelay, OUTPUT);
@@ -111,11 +107,6 @@ void setup() {
 
   // NTP
   execNtpUpdate();
-
-  // Sound
-  file = new AudioFileSourcePROGMEM( sound, sizeof(sound) );
-  out = new AudioOutputI2S(0, 1);
-  wav = new AudioGeneratorWAV();
 }
 
 void loop() {
@@ -161,16 +152,9 @@ void loop() {
               digitalWrite(dfRelay, LOW); // Switch line back to native domophone
               domoSWToOff();
             }
-            if (header.indexOf("GET /?answer") >= 0) {
-              Serial.println("Answering the call");
-              digitalWrite(dfRelay, HIGH); // Switch line to our gadget
-              digitalWrite(answerPin, HIGH); // Answer the call
-              delay(2500);
-              soundStop = false;
-              playSound();
-              digitalWrite(answerPin, LOW); // Reset the call
-              delay(500);
-              digitalWrite(dfRelay, LOW); // Switch line back to native domophone
+            if (header.indexOf("GET /?reboot") >= 0) {
+              Serial.println("Rebooting");
+              ESP.restart();
             }
 
             client.println();
@@ -191,17 +175,23 @@ void loop() {
   checkForNM();
   
   // Detect calling
+  callIsActive = digitalRead(callDetect); // Check if calling
+  if(callIsActive){
+    unsigned long currentCCMillis = millis(); // Take current millis
+    if(callFirstTime){ // Check if first signal
+      callsCount++; // Add +1 to call counter
+      domoCallingCount(); // Send message
+      callFirstTimeMillis = currentCCMillis; 
+      callFirstTime = false; // Uncheck first signal
+    }
+    if(currentCCMillis - callFirstTimeMillis >= callInterval){
+      callFirstTime = true; // If timer is over, return checking for first signal
+    }
+  }
   if(nightMode){
     digitalWrite(dfRelay, HIGH);
-    callState = digitalRead(callDetect);
-    if(callState){ // If calling
-//      digitalWrite(answerPin, HIGH); // Answer the call
-//      delay(2500);
-      soundStop = false;
-//      playSound();
+    if(callIsActive){ // If calling
       momentClose();
-//      digitalWrite(answerPin, LOW); // Reset the call
-//      delay(500);
     }
   } else {
     digitalWrite(dfRelay, LOW);
@@ -215,6 +205,8 @@ void loop() {
     if(!isHour4ntp){
       execNtpUpdate();
       isHour4ntp = true;
+      // Reset calls count to 0
+      callsCount = 0;
     }
   } else {
     isHour4ntp = false;
@@ -387,22 +379,24 @@ void momentOpen(){
   digitalWrite(answerPin, LOW);
 }
 
-void playSound(){
-  file = new AudioFileSourcePROGMEM( sound, sizeof(sound) );
-  while(!soundStop){
-    wav->begin(file, out);
-    if (wav->isRunning()) {
-      if (!wav->loop()){
-        wav->stop();
-        soundStop = true;
-      }
-    }
-  }
-}
-
 void domoSWToOff(){
   if (client.connect(domoserver.c_str(), domoport)) {
     client.print("GET /json.htm?type=command&param=switchlight&idx=46&switchcmd=Set%20Level&level=0");
+    client.println(" HTTP/1.1");
+    client.print("Host: ");
+    client.print(domoserver);
+    client.print(":");
+    client.println(domoport);
+    client.println("Cache-Control: no-cache");
+    client.println("Connection: close");
+    client.println();
+  }
+}
+
+void domoCallingCount(){
+  if (client.connect(domoserver.c_str(), domoport)) {
+    client.print("GET /json.htm?type=command&param=udevice&idx=47&svalue=");
+    client.print(callsCount);
     client.println(" HTTP/1.1");
     client.print("Host: ");
     client.print(domoserver);
