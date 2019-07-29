@@ -11,7 +11,7 @@
 #include <Wire.h>
 #include <Update.h>
 
-#define FW_VERSION 1006
+#define FW_VERSION 1008
 
 // Replace with your network credentials
 #define ssid      ""
@@ -130,7 +130,7 @@ void loop() {
             client.println("Connection: close");
             client.println();
 
-            if (header.indexOf("GET /?night") >= 0) {
+/*            if (header.indexOf("GET /?night") >= 0) {
               Serial.println("Night Mode On");
               forceNightMode = true;
               forceDayMode = false;
@@ -139,7 +139,7 @@ void loop() {
               Serial.println("Night Mode Off");
               forceDayMode = true;
               forceNightMode = false;
-            }
+            }*/
             if (header.indexOf("GET /?open") >= 0) {
               Serial.println("Opening door");
               digitalWrite(dfRelay, HIGH); // Switch line to our gadget
@@ -177,21 +177,22 @@ void loop() {
   checkForNM();
   
   // Detect calling
-  callIsActive = digitalRead(callDetect); // Check if calling
+/*  callIsActive = digitalRead(callDetect); // Check if calling
   if(callIsActive){
     unsigned long currentCCMillis = millis(); // Take current millis
     if(callFirstTime){ // Check if first signal
       callsCount++; // Add +1 to call counter
-      domoCallCount(callsCount); // Send message
+//      domoCallCount(callsCount); // Send message
       callFirstTimeMillis = currentCCMillis; 
       callFirstTime = false; // Uncheck first signal
     }
     if(currentCCMillis - callFirstTimeMillis >= callInterval){
       callFirstTime = true; // If timer is over, return checking for first signal
     }
-  }
+  }*/
   if(nightMode){
     digitalWrite(dfRelay, HIGH);
+    callIsActive = digitalRead(callDetect); // Check if calling
     if(callIsActive){ // If calling
       momentClose();
     }
