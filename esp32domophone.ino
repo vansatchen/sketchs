@@ -14,8 +14,8 @@
 #define FW_VERSION 1010
 
 // Replace with your network credentials
-#define ssid      "ugu"
-#define password  "van_SATCHen"
+#define ssid      ""
+#define password  ""
 
 // For OTA update
 long contentLength = 0;
