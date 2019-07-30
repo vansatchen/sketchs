@@ -11,11 +11,11 @@
 #include <Wire.h>
 #include <Update.h>
 
-#define FW_VERSION 1008
+#define FW_VERSION 1010
 
 // Replace with your network credentials
-#define ssid      ""
-#define password  ""
+#define ssid      "ugu"
+#define password  "van_SATCHen"
 
 // For OTA update
 long contentLength = 0;
@@ -109,6 +109,8 @@ void setup() {
 
   // NTP
   execNtpUpdate();
+
+  domoSWToOff();
 }
 
 void loop() {
@@ -177,22 +179,22 @@ void loop() {
   checkForNM();
   
   // Detect calling
-/*  callIsActive = digitalRead(callDetect); // Check if calling
+  callIsActive = digitalRead(callDetect); // Check if calling
   if(callIsActive){
     unsigned long currentCCMillis = millis(); // Take current millis
     if(callFirstTime){ // Check if first signal
       callsCount++; // Add +1 to call counter
-//      domoCallCount(callsCount); // Send message
+      domoCallCount(callsCount); // Send message
       callFirstTimeMillis = currentCCMillis; 
       callFirstTime = false; // Uncheck first signal
     }
     if(currentCCMillis - callFirstTimeMillis >= callInterval){
       callFirstTime = true; // If timer is over, return checking for first signal
     }
-  }*/
+  }
   if(nightMode){
     digitalWrite(dfRelay, HIGH);
-    callIsActive = digitalRead(callDetect); // Check if calling
+//    callIsActive = digitalRead(callDetect); // Check if calling
     if(callIsActive){ // If calling
       momentClose();
     }
