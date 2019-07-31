@@ -1,6 +1,3 @@
-// Sketch for control cat tray using vl53l0x laser sensor and mg996r servo.
-// developed by vansatchen/
-
 #include <Wire.h>
 #include <VL53L0X.h>
 #include <Servo.h>
@@ -127,6 +124,7 @@ void letsWork(){
       workCount = 0;
     }
   }*/
+  rl();
   for(int i=0 ; i<90 ; i++){
     servo.write(i);
     delay(20);
@@ -137,4 +135,5 @@ void letsWork(){
     delay(20);
   }
   timeToWork = false;
+  el();
 }
