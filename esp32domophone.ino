@@ -113,6 +113,7 @@ void setup() {
   execNtpUpdate();
 
   domoSWToOff();
+  domoCallCount(callsCount); // Send current count to domoticz
 
   pushbullet((String)"Domophone started");
 }
@@ -426,7 +427,7 @@ bool pushbullet(const String &message) {
   const char* PushBulletAPIKEY = "";
   const uint16_t timeout = 2000;
   const char*  host = "api.pushbullet.com";
-  String messagebody = R"({"type": "note", "title": "Push from ESP32", "body": ")" + message + R"("})";
+  String messagebody = R"({"type": "note", "title": "Push from ESP32domophone", "body": ")" + message + R"("})";
   uint32_t sendezeit = millis();
   if (!secureClient.connect(host, 443)) {
     return false;
