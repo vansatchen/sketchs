@@ -11,7 +11,7 @@
 #include <Wire.h>
 #include <Update.h>
 
-#define FW_VERSION 1010
+#define FW_VERSION 1011
 
 // Replace with your network credentials
 #define ssid      ""
@@ -206,17 +206,21 @@ void loop() {
   RtcDateTime currentTime = rtcObject.GetDateTime();
   int currenthour = currentTime.Hour();
   int currentmin = currentTime.Minute();
+  int currentsec = currentTime.Second();
   if(currenthour == hour4ntp & currentmin == min4ntp){
     if(!isHour4ntp){
       execNtpUpdate();
       isHour4ntp = true;
-      // Reset calls count to 0
-      callsCount = 0;
     }
   } else {
     isHour4ntp = false;
   }
 
+  // Reset calls count to 0
+  if(currenthour == 0 & currentmin == 0 & currentsec == 0){
+    callsCount = 0;
+  }
+  
   delay(10);
 }
 
