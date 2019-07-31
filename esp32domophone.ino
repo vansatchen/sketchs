@@ -10,6 +10,7 @@
 #include <RtcDS3231.h>
 #include <Wire.h>
 #include <Update.h>
+#include <WiFiClientSecure.h>
 
 #define FW_VERSION 1011
 
@@ -32,6 +33,7 @@ String getHeaderValue(String header, String headerName) {
 
 WiFiServer server(port);
 WiFiClient client;
+WiFiClientSecure secureClient;
 
 String header;  // Variable to store the HTTP request
 
@@ -111,6 +113,8 @@ void setup() {
   execNtpUpdate();
 
   domoSWToOff();
+
+  pushbullet((String)"Domophone started");
 }
 
 void loop() {
@@ -184,7 +188,8 @@ void loop() {
     unsigned long currentCCMillis = millis(); // Take current millis
     if(callFirstTime){ // Check if first signal
       callsCount++; // Add +1 to call counter
-      domoCallCount(callsCount); // Send message
+      domoCallCount(callsCount); // Send current count to domoticz
+      pushbullet((String)"Call to domophone initiated");
       callFirstTimeMillis = currentCCMillis; 
       callFirstTime = false; // Uncheck first signal
     }
@@ -415,4 +420,33 @@ void domoCallCount(int callsCountVar){
     client.println("Connection: close");
     client.println();
   }
+}
+
+bool pushbullet(const String &message) {
+  const char* PushBulletAPIKEY = "";
+  const uint16_t timeout = 2000;
+  const char*  host = "api.pushbullet.com";
+  String messagebody = R"({"type": "note", "title": "Push from ESP32", "body": ")" + message + R"("})";
+  uint32_t sendezeit = millis();
+  if (!secureClient.connect(host, 443)) {
+    return false;
+  }
+  else {
+    secureClient.printf("POST /v2/pushes HTTP/1.1\r\nHost: %s\r\nAuthorization: Bearer %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s\r\n"\
+                        , host, PushBulletAPIKEY, messagebody.length(), messagebody.c_str());
+  }
+  while (!secureClient.available()) {
+    if (millis() - sendezeit > timeout) {
+      secureClient.stop();
+      return false;
+    }
+  }
+  while (secureClient.available()) {
+    String line = secureClient.readStringUntil('\n');
+    if (line.startsWith("HTTP/1.1 200 OK")) {
+      secureClient.stop();
+      return true;
+    }
+  }
+  return false;
 }
