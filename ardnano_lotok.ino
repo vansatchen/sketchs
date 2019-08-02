@@ -32,7 +32,7 @@ void setup(){
   servo.attach(servoPin, servoMinImp, servoMaxImp);
   servo.write(0);
   
-  Serial.println("Going to loop");
+  Serial.println("After reboot. Waiting for cat");
 }
 
 void loop(){
@@ -40,13 +40,23 @@ void loop(){
   if((!checkCat) and (timeToWork)){
     Serial.println("Time to work!!!");
     letsWork();
+    Serial.println("Waiting for cat");
   }
 }
 
 void checkSensor(){
   int distanceLaser = sensor.readRangeSingleMillimeters();
+  if(distanceLaser == -1){
+    Serial.println("Laser sensor not detected");
+    rl();
+    delay(500);
+    el();
+    delay(500);
+    return;
+  }
   if(distanceLaser <= presencePlace){
-    Serial.println("Somebody present");
+    Serial.print("Somebody present ");
+    Serial.println(distanceLaser);
     checkState = true;
     objectDetected();
   } else {
