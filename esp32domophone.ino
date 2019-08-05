@@ -12,7 +12,7 @@
 #include <Update.h>
 #include <WiFiClientSecure.h>
 
-#define FW_VERSION 1011
+#define FW_VERSION 1014
 
 // Replace with your network credentials
 #define ssid      ""
@@ -115,7 +115,7 @@ void setup() {
   domoSWToOff();
   domoCallCount(callsCount); // Send current count to domoticz
 
-  pushbullet((String)"Domophone started");
+  pushbullet((String)"Domophone started at " + currentTime.Hour() + ":" + currentTime.Minute());
 }
 
 void loop() {
@@ -137,16 +137,18 @@ void loop() {
             client.println("Connection: close");
             client.println();
 
-/*            if (header.indexOf("GET /?night") >= 0) {
+            if (header.indexOf("GET /?night") >= 0) {
               Serial.println("Night Mode On");
               forceNightMode = true;
+              nightMode = true;
               forceDayMode = false;
             }
             if (header.indexOf("GET /?day") >= 0) {
               Serial.println("Night Mode Off");
               forceDayMode = true;
+              nightMode = false;
               forceNightMode = false;
-            }*/
+            }
             if (header.indexOf("GET /?open") >= 0) {
               Serial.println("Opening door");
               digitalWrite(dfRelay, HIGH); // Switch line to our gadget
@@ -372,9 +374,16 @@ void checkForNM(){
   if(currenthour >= nightModeOn & currenthour < nightModeOff){
     nightMode = true;
     forceNightMode = false;
-  } else {
-    nightMode = false;
     forceDayMode = false;
+  } else {
+    if(!forceNightMode){
+      nightMode = false;
+      forceDayMode = false;
+    }
+    if(forceDayMode){
+      nightMode = false;
+      forceNightMode = false;
+    }
   }
 }
 
@@ -427,7 +436,7 @@ bool pushbullet(const String &message) {
   const char* PushBulletAPIKEY = "";
   const uint16_t timeout = 2000;
   const char*  host = "api.pushbullet.com";
-  String messagebody = R"({"type": "note", "title": "Push from ESP32domophone", "body": ")" + message + R"("})";
+  String messagebody = R"({"type": "note", "title": "Push from ESP32", "body": ")" + message + R"("})";
   uint32_t sendezeit = millis();
   if (!secureClient.connect(host, 443)) {
     return false;
