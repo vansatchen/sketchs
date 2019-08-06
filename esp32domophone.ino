@@ -12,7 +12,7 @@
 #include <Update.h>
 #include <WiFiClientSecure.h>
 
-#define FW_VERSION 1014
+#define FW_VERSION 1015
 
 // Replace with your network credentials
 #define ssid      ""
@@ -229,7 +229,7 @@ void loop() {
     callsCount = 0;
   }
   
-  delay(10);
+//  delay(10);
 }
 
 // OTA Logic 
@@ -371,7 +371,7 @@ void execNtpUpdate(){
 void checkForNM(){
   RtcDateTime currentTime = rtcObject.GetDateTime();
   int currenthour = currentTime.Hour();
-  if(currenthour >= nightModeOn & currenthour < nightModeOff){
+  if((currenthour >= nightModeOn & currenthour < nightModeOff) and (!forceDayMode)){
     nightMode = true;
     forceNightMode = false;
     forceDayMode = false;
