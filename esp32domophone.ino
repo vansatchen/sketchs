@@ -12,7 +12,7 @@
 #include <Update.h>
 #include <WiFiClientSecure.h>
 
-#define FW_VERSION 1018
+#define FW_VERSION 1019
 
 // Replace with your network credentials
 #define ssid      ""
@@ -136,10 +136,12 @@ void loop() {
             if (header.indexOf("GET /?night") >= 0) {
               Serial.println("Night Mode On");
               forceNightMode = true;
+              forceDayMode = false;
             }
             if (header.indexOf("GET /?day") >= 0) {
               Serial.println("Night Mode Off");
               forceDayMode = true;
+              forceNightMode = false;
             }
             if (header.indexOf("GET /?open") >= 0) {
               Serial.println("Opening door");
