@@ -12,7 +12,7 @@
 #include <Update.h>
 #include <WiFiClientSecure.h>
 
-#define FW_VERSION 1015
+#define FW_VERSION 1018
 
 // Replace with your network credentials
 #define ssid      ""
@@ -59,14 +59,10 @@ bool callIsActive = false;
 bool nightMode = false;
 int callsCount = 0;
 unsigned long callFirstTimeMillis = 0;
-const long callInterval = 15000;
+const long callInterval = 3000;
 bool callFirstTime = true;
 bool forceNightMode = false;
 bool forceDayMode = false;
-
-// HTTP
-bool forceRunNMOn = false;
-bool forceRunNMOff = false;
 
 // Domoticz
 String domoserver = "192.168.1.159";
@@ -140,14 +136,10 @@ void loop() {
             if (header.indexOf("GET /?night") >= 0) {
               Serial.println("Night Mode On");
               forceNightMode = true;
-              nightMode = true;
-              forceDayMode = false;
             }
             if (header.indexOf("GET /?day") >= 0) {
               Serial.println("Night Mode Off");
               forceDayMode = true;
-              nightMode = false;
-              forceNightMode = false;
             }
             if (header.indexOf("GET /?open") >= 0) {
               Serial.println("Opening door");
@@ -200,9 +192,9 @@ void loop() {
       callFirstTime = true; // If timer is over, return checking for first signal
     }
   }
-  if(nightMode){
+  if(((nightMode) and (!forceDayMode)) or (forceNightMode)){
     digitalWrite(dfRelay, HIGH);
-//    callIsActive = digitalRead(callDetect); // Check if calling
+    callIsActive = digitalRead(callDetect); // Check if calling
     if(callIsActive){ // If calling
       momentClose();
     }
@@ -227,6 +219,7 @@ void loop() {
   // Reset calls count to 0
   if(currenthour == 0 & currentmin == 0 & currentsec == 0){
     callsCount = 0;
+    domoCallCount(callsCount);
   }
   
 //  delay(10);
@@ -371,19 +364,11 @@ void execNtpUpdate(){
 void checkForNM(){
   RtcDateTime currentTime = rtcObject.GetDateTime();
   int currenthour = currentTime.Hour();
-  if((currenthour >= nightModeOn & currenthour < nightModeOff) and (!forceDayMode)){
+  if(currenthour >= nightModeOn & currenthour < nightModeOff){
     nightMode = true;
     forceNightMode = false;
-    forceDayMode = false;
   } else {
-    if(!forceNightMode){
-      nightMode = false;
-      forceDayMode = false;
-    }
-    if(forceDayMode){
-      nightMode = false;
-      forceNightMode = false;
-    }
+    forceDayMode = false;
   }
 }
 
