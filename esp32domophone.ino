@@ -12,7 +12,7 @@
 #include <Update.h>
 #include <WiFiClientSecure.h>
 
-#define FW_VERSION 1019
+#define FW_VERSION 1020
 
 // Replace with your network credentials
 #define ssid      ""
@@ -371,6 +371,7 @@ void checkForNM(){
     forceNightMode = false;
   } else {
     forceDayMode = false;
+    nightMode = false;
   }
 }
 
