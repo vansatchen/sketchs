@@ -12,7 +12,7 @@
 #include <Update.h>
 #include <WiFiClientSecure.h>
 
-#define FW_VERSION 1020
+#define FW_VERSION 1024
 
 // Replace with your network credentials
 #define ssid      ""
