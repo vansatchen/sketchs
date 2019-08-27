@@ -10,7 +10,7 @@
 #include <RtcDS3231.h>
 #include <PCF8591.h>
 
-#define FW_VERSION 1019
+#define FW_VERSION 1021
 
 // Replace with your network credentials
 #define ssid      ""
@@ -227,6 +227,10 @@ void loop(){
               delay(4000);
               digitalWrite(kran2open, HIGH);
             }
+            if (header.indexOf("GET /?reboot") >= 0) {
+              Serial.println("Rebooting");
+              ESP.restart();
+            }
             client.println();
             break;
           } else { // if you got a newline, then clear currentLine
@@ -297,6 +301,9 @@ void loop(){
       forceRun = false;
     }
   }
+
+  // Memory Usage
+  memoryUsage();
 
   delay(10);
 }
@@ -437,7 +444,7 @@ void execNtpUpdate(){
 
 // Valves training
 void execValvesTraining(){
-  int valve[4] = {kran1open,kran1close,kran2open,kran2close};
+/*  int valve[4] = {kran1open,kran1close,kran2open,kran2close};
   for(int i=0; i<3; i++){
     digitalWrite(valve[i], LOW);
     delay(8000);
@@ -450,7 +457,31 @@ void execValvesTraining(){
   delay(1000);
   digitalWrite(valve[2], LOW);
   delay(4000);
-  digitalWrite(valve[2], HIGH);
+  digitalWrite(valve[2], HIGH);*/
+  
+  digitalWrite(kran1open, LOW);
+  delay(8000);
+  digitalWrite(kran1open, HIGH);
+  delay(1000);
+  digitalWrite(kran1close, LOW);
+  delay(8000);
+  digitalWrite(kran1close, HIGH);
+  delay(1000);
+  digitalWrite(kran1open, LOW);
+  delay(4000);
+  digitalWrite(kran1open, HIGH);
+  delay(1000);
+  digitalWrite(kran2open, LOW);
+  delay(8000);
+  digitalWrite(kran2open, HIGH);
+  delay(1000);
+  digitalWrite(kran2close, LOW);
+  delay(8000);
+  digitalWrite(kran2close, HIGH);
+  delay(1000);
+  digitalWrite(kran2open, LOW);
+  delay(4000);
+  digitalWrite(kran2open, HIGH);
 }
 
 // Get data from MQ-2
@@ -505,6 +536,27 @@ void execMQsens(int patternGazVal){
           client.println();
         }
       }
+    }
+  }
+}
+
+// Memory usage
+void memoryUsage(){
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval){
+    previousMillis = currentMillis;
+    int freeMemory = ESP.getFreeHeap();
+    if (client.connect(domoserver.c_str(), domoport)) {
+      client.print("GET /json.htm?type=command&param=udevice&idx=48&svalue=");
+      client.print(freeMemory);
+      client.println(" HTTP/1.1");
+      client.print("Host: ");
+      client.print(domoserver);
+      client.print(":");
+      client.println(domoport);
+      client.println("Cache-Control: no-cache");
+      client.println("Connection: close");
+      client.println();
     }
   }
 }
