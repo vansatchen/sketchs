@@ -10,7 +10,7 @@
 #include <RtcDS3231.h>
 #include <PCF8591.h>
 
-#define FW_VERSION 1021
+#define FW_VERSION 1022
 
 // Replace with your network credentials
 #define ssid      ""
@@ -58,6 +58,9 @@ int patternGaz;
 #define ledPin 2
 #define gazDiff 5
 bool isFanOn = false;
+
+// Memory
+unsigned long previousMemMillis = 0;
 
 // PCF8591
 #define PCF8591_I2C_ADDRESS 0x48
@@ -542,9 +545,9 @@ void execMQsens(int patternGazVal){
 
 // Memory usage
 void memoryUsage(){
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= interval){
-    previousMillis = currentMillis;
+  unsigned long currentMemMillis = millis();
+  if (currentMemMillis - previousMemMillis >= interval){
+    previousMemMillis = currentMemMillis;
     int freeMemory = ESP.getFreeHeap();
     if (client.connect(domoserver.c_str(), domoport)) {
       client.print("GET /json.htm?type=command&param=udevice&idx=48&svalue=");
