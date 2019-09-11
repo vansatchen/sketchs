@@ -10,11 +10,13 @@
 #include <RtcDS3231.h>
 #include <PCF8591.h>
 
-#define FW_VERSION 1022
+#define FW_VERSION 1023
 
 // Replace with your network credentials
 #define ssid      ""
 #define password  ""
+unsigned long previousWFMillis = 0;
+const long checkWFInterval = 60000;
 
 // For OTA update
 long contentLength = 0;
@@ -89,15 +91,27 @@ void setup() {
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+/*  while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+  }*/
+  for (int i = 0; i < 60; i++){
+    if ( WiFi.status() != WL_CONNECTED ){
+      delay(500);
+      Serial.print(".");
+    } else {
+      Serial.println("");
+      Serial.println("WiFi connected.");
+      Serial.print("IP address: ");
+      Serial.println(WiFi.localIP());
+      break;
+    }
   }
   // Print local IP address and start web server
-  Serial.println("");
+/*  Serial.println("");
   Serial.println("WiFi connected.");
   Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+  Serial.println(WiFi.localIP());*/
   server.begin();
 
   execOTA();  // Execute OTA Update
@@ -307,6 +321,9 @@ void loop(){
 
   // Memory Usage
   memoryUsage();
+
+  // Check wifi
+  checkWIFI();
 
   delay(10);
 }
@@ -560,6 +577,18 @@ void memoryUsage(){
       client.println("Cache-Control: no-cache");
       client.println("Connection: close");
       client.println();
+    }
+  }
+}
+
+// Check wifi is connected
+void checkWIFI(){
+  unsigned long currentWFMillis = millis();
+  if (currentWFMillis - previousWFMillis >= checkWFInterval){
+    previousWFMillis = currentWFMillis;
+    if (WiFi.status() != WL_CONNECTED){
+      WiFi.disconnect();
+      WiFi.begin(ssid, password);
     }
   }
 }
