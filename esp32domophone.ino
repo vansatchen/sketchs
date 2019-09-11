@@ -11,8 +11,10 @@
 #include <Wire.h>
 #include <Update.h>
 #include <WiFiClientSecure.h>
+#include <MasterPZEM.h>
+#include "HardwareSerial.h"
 
-#define FW_VERSION 1024
+#define FW_VERSION 1019
 
 // Replace with your network credentials
 #define ssid      ""
@@ -68,6 +70,13 @@ bool forceDayMode = false;
 String domoserver = "192.168.1.159";
 #define domoport 8080
 
+// PZEM-004t
+MasterPZEM node;
+static uint8_t pzemSlaveAddr = 0x01;
+HardwareSerial pzemPort(2);
+unsigned long previousPSMillis = 0;
+const long PSInterval = 10000;
+
 void setup() {
   pinMode(dfRelay, OUTPUT);
   digitalWrite(dfRelay, LOW); // Line to native domophone as default
@@ -109,7 +118,11 @@ void setup() {
   execNtpUpdate();
 
   domoSWToOff();
-  domoCallCount(callsCount); // Send current count to domoticz
+  domoUpdate(callsCount, 47); // Send current count to domoticz
+
+  // PZEM
+  pzemPort.begin(9600);
+  node.begin(pzemSlaveAddr, pzemPort);
 
   pushbullet((String)"Domophone started at " + currentTime.Hour() + ":" + currentTime.Minute());
 }
@@ -136,12 +149,10 @@ void loop() {
             if (header.indexOf("GET /?night") >= 0) {
               Serial.println("Night Mode On");
               forceNightMode = true;
-              forceDayMode = false;
             }
             if (header.indexOf("GET /?day") >= 0) {
               Serial.println("Night Mode Off");
               forceDayMode = true;
-              forceNightMode = false;
             }
             if (header.indexOf("GET /?open") >= 0) {
               Serial.println("Opening door");
@@ -180,12 +191,12 @@ void loop() {
   checkForNM();
   
   // Detect calling
-  callIsActive = digitalRead(callDetect); // Check if calling
+/*  callIsActive = digitalRead(callDetect); // Check if calling
   if(callIsActive){
     unsigned long currentCCMillis = millis(); // Take current millis
     if(callFirstTime){ // Check if first signal
       callsCount++; // Add +1 to call counter
-      domoCallCount(callsCount); // Send current count to domoticz
+      domoUpdate(callsCount, 47); // Send current count to domoticz
       pushbullet((String)"Call to domophone initiated");
       callFirstTimeMillis = currentCCMillis; 
       callFirstTime = false; // Uncheck first signal
@@ -193,7 +204,7 @@ void loop() {
     if(currentCCMillis - callFirstTimeMillis >= callInterval){
       callFirstTime = true; // If timer is over, return checking for first signal
     }
-  }
+  }*/
   if(((nightMode) and (!forceDayMode)) or (forceNightMode)){
     digitalWrite(dfRelay, HIGH);
     callIsActive = digitalRead(callDetect); // Check if calling
@@ -218,11 +229,14 @@ void loop() {
     isHour4ntp = false;
   }
 
-  // Reset calls count to 0
+  // Reset calls count to 0 at 0:00
   if(currenthour == 0 & currentmin == 0 & currentsec == 0){
     callsCount = 0;
-    domoCallCount(callsCount);
+    domoUpdate(callsCount, 47);
   }
+
+  // Power stats
+  powerStats();
   
 //  delay(10);
 }
@@ -371,7 +385,6 @@ void checkForNM(){
     forceNightMode = false;
   } else {
     forceDayMode = false;
-    nightMode = false;
   }
 }
 
@@ -405,7 +418,7 @@ void domoSWToOff(){
   }
 }
 
-void domoCallCount(int callsCountVar){
+void domoUpdate(int callsCountVar, int idx){
   if (client.connect(domoserver.c_str(), domoport)) {
     client.print("GET /json.htm?type=command&param=udevice&idx=47&svalue=");
     client.print(callsCountVar);
@@ -447,4 +460,47 @@ bool pushbullet(const String &message) {
     }
   }
   return false;
+}
+
+void powerStats(){
+  unsigned long currentPSMillis = millis();
+  if(currentPSMillis - previousPSMillis >= PSInterval){
+    previousPSMillis = currentPSMillis;
+    uint8_t result = node.readInputRegisters(0x0000, 9);
+    if (result == node.ku8MBSuccess){
+      float voltage = node.getResponseBuffer(0x0000) / 10.0;
+      domoUpdate(voltage, 49);
+
+      uint16_t tempWord;
+
+      float power;
+      tempWord = 0x0000;
+      tempWord |= node.getResponseBuffer(0x0003);       //LowByte
+      tempWord |= node.getResponseBuffer(0x0004) << 8;  //highByte
+      power = tempWord / 10.0;
+      domoUpdate(power, 52);
+
+      float current;
+      tempWord = 0x0000;
+      tempWord |= node.getResponseBuffer(0x0001);       //LowByte
+      tempWord |= node.getResponseBuffer(0x0002) << 8;  //highByte
+      current = tempWord / 1000.0;
+      domoUpdate(current, 50);
+   
+/*    uint16_t energy;
+    tempWord = 0x0000;
+    tempWord |= node.getResponseBuffer(0x0005);       //LowByte
+    tempWord |= node.getResponseBuffer(0x0006) << 8;  //highByte
+    energy = tempWord;*/
+    
+      int frequency = node.getResponseBuffer(0x0007);
+      domoUpdate(frequency/10, 53);
+   
+//    Serial.print(node.getResponseBuffer(0x0008)); // pf
+
+//    int alarmStatus = node.getResponseBuffer(0x0009); // alarm?
+    } else {
+      Serial.println("Failed to read modbus");  
+    }
+  }
 }
