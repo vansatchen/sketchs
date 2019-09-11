@@ -14,7 +14,7 @@
 #include <MasterPZEM.h>
 #include "HardwareSerial.h"
 
-#define FW_VERSION 1019
+#define FW_VERSION 1022
 
 // Replace with your network credentials
 #define ssid      ""
@@ -51,8 +51,8 @@ int currenthour, currentmin;
 RtcDS3231<TwoWire> rtcObject(Wire); // RTC
 
 #define dfRelay 33 // Pin for relay to take control of calls
-#define callDetect 17 // Pin for detect calling
-#define answerPin 16 // Pin for relay to switch to answer
+#define callDetect 4 // Pin for detect calling
+#define answerPin 12 // Pin for relay to switch to answer
 #define openPin 15 // Pin for open door
 bool callIsActive = false;
 
@@ -149,10 +149,12 @@ void loop() {
             if (header.indexOf("GET /?night") >= 0) {
               Serial.println("Night Mode On");
               forceNightMode = true;
+              forceDayMode = false;
             }
             if (header.indexOf("GET /?day") >= 0) {
               Serial.println("Night Mode Off");
               forceDayMode = true;
+              forceNightMode = false;
             }
             if (header.indexOf("GET /?open") >= 0) {
               Serial.println("Opening door");
@@ -418,10 +420,12 @@ void domoSWToOff(){
   }
 }
 
-void domoUpdate(int callsCountVar, int idx){
+void domoUpdate(int dataVar, int idxVar){
   if (client.connect(domoserver.c_str(), domoport)) {
-    client.print("GET /json.htm?type=command&param=udevice&idx=47&svalue=");
-    client.print(callsCountVar);
+    client.print("GET /json.htm?type=command&param=udevice&idx=");
+    client.print(idxVar);
+    client.print("&svalue=");
+    client.print(dataVar);
     client.println(" HTTP/1.1");
     client.print("Host: ");
     client.print(domoserver);
