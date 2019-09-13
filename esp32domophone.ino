@@ -14,7 +14,7 @@
 #include <MasterPZEM.h>
 #include "HardwareSerial.h"
 
-#define FW_VERSION 1022
+#define FW_VERSION 1023
 
 // Replace with your network credentials
 #define ssid      ""
@@ -386,6 +386,7 @@ void checkForNM(){
     nightMode = true;
     forceNightMode = false;
   } else {
+    nightMode = false;
     forceDayMode = false;
   }
 }
