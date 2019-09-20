@@ -7,18 +7,15 @@
 
 #include <WiFi.h>
 #include "time.h"
-#include <RtcDS3231.h>
+#include <RtcDS1307.h>
 #include <Wire.h>
 #include <Update.h>
 #include <WiFiClientSecure.h>
 #include <MasterPZEM.h>
 #include "HardwareSerial.h"
+#include "auth.h"
 
-#define FW_VERSION 1023
-
-// Replace with your network credentials
-#define ssid      ""
-#define password  ""
+#define FW_VERSION 1024
 
 // For OTA update
 long contentLength = 0;
@@ -40,7 +37,8 @@ WiFiClientSecure secureClient;
 String header;  // Variable to store the HTTP request
 
 // NTP
-const char* ntpServer = "192.168.1.159";
+//const char* ntpServer = "192.168.1.159";
+const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 14400;
 const int   daylightOffset_sec = 3600;
 #define hour4ntp 3
@@ -48,16 +46,16 @@ const int   daylightOffset_sec = 3600;
 bool isHour4ntp = false;
 int currenthour, currentmin;
 
-RtcDS3231<TwoWire> rtcObject(Wire); // RTC
+RtcDS1307<TwoWire> rtcObject(Wire); // RTC
 
 #define dfRelay 33 // Pin for relay to take control of calls
-#define callDetect 4 // Pin for detect calling
-#define answerPin 12 // Pin for relay to switch to answer
-#define openPin 15 // Pin for open door
+#define callDetect 27 // Pin for detect calling
+#define answerPin 26 // Pin for relay to switch to answer
+#define openPin 35 // Pin for open door
 bool callIsActive = false;
 
-#define nightModeOn 0
-#define nightModeOff 10
+#define nightModeOn 0 // Time to enable nightMode
+#define nightModeOff 10 // Time to disable nightMode
 bool nightMode = false;
 int callsCount = 0;
 unsigned long callFirstTimeMillis = 0;
@@ -193,7 +191,7 @@ void loop() {
   checkForNM();
   
   // Detect calling
-/*  callIsActive = digitalRead(callDetect); // Check if calling
+  callIsActive = digitalRead(callDetect); // Check if calling
   if(callIsActive){
     unsigned long currentCCMillis = millis(); // Take current millis
     if(callFirstTime){ // Check if first signal
@@ -206,8 +204,8 @@ void loop() {
     if(currentCCMillis - callFirstTimeMillis >= callInterval){
       callFirstTime = true; // If timer is over, return checking for first signal
     }
-  }*/
-  if(((nightMode) and (!forceDayMode)) or (forceNightMode)){
+  }
+/*  if(((nightMode) and (!forceDayMode)) or (forceNightMode)){
     digitalWrite(dfRelay, HIGH);
     callIsActive = digitalRead(callDetect); // Check if calling
     if(callIsActive){ // If calling
@@ -215,7 +213,7 @@ void loop() {
     }
   } else {
     digitalWrite(dfRelay, LOW);
-  }
+  }*/
   
   // NTP update at 3:00
   RtcDateTime currentTime = rtcObject.GetDateTime();
@@ -439,7 +437,6 @@ void domoUpdate(int dataVar, int idxVar){
 }
 
 bool pushbullet(const String &message) {
-  const char* PushBulletAPIKEY = "";
   const uint16_t timeout = 2000;
   const char*  host = "api.pushbullet.com";
   String messagebody = R"({"type": "note", "title": "Push from ESP32", "body": ")" + message + R"("})";
