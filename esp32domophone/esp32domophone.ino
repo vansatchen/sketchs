@@ -15,7 +15,7 @@
 #include "HardwareSerial.h"
 #include "auth.h"
 
-#define FW_VERSION 1024
+#define FW_VERSION 1026
 
 // For OTA update
 long contentLength = 0;
@@ -37,8 +37,7 @@ WiFiClientSecure secureClient;
 String header;  // Variable to store the HTTP request
 
 // NTP
-//const char* ntpServer = "192.168.1.159";
-const char* ntpServer = "pool.ntp.org";
+const char* ntpServer = "192.168.1.159";
 const long  gmtOffset_sec = 14400;
 const int   daylightOffset_sec = 3600;
 #define hour4ntp 3
@@ -193,19 +192,19 @@ void loop() {
   // Detect calling
   callIsActive = digitalRead(callDetect); // Check if calling
   if(callIsActive){
-    unsigned long currentCCMillis = millis(); // Take current millis
+/*    unsigned long currentCCMillis = millis(); // Take current millis
     if(callFirstTime){ // Check if first signal
-      callsCount++; // Add +1 to call counter
-      domoUpdate(callsCount, 47); // Send current count to domoticz
+      callsCount++; // Add +1 to call counter 
+      domoUpdate(callsCount, 47); // Send current count to domoticz */
       pushbullet((String)"Call to domophone initiated");
-      callFirstTimeMillis = currentCCMillis; 
+/*      callFirstTimeMillis = currentCCMillis; 
       callFirstTime = false; // Uncheck first signal
     }
     if(currentCCMillis - callFirstTimeMillis >= callInterval){
       callFirstTime = true; // If timer is over, return checking for first signal
-    }
+    }*/
   }
-/*  if(((nightMode) and (!forceDayMode)) or (forceNightMode)){
+  if((nightMode) or (forceNightMode)){
     digitalWrite(dfRelay, HIGH);
     callIsActive = digitalRead(callDetect); // Check if calling
     if(callIsActive){ // If calling
@@ -213,7 +212,7 @@ void loop() {
     }
   } else {
     digitalWrite(dfRelay, LOW);
-  }*/
+  }
   
   // NTP update at 3:00
   RtcDateTime currentTime = rtcObject.GetDateTime();
