@@ -9,12 +9,10 @@
 #include <Wire.h>
 #include <RtcDS3231.h>
 #include <PCF8591.h>
+#include "auth.h"
 
-#define FW_VERSION 1023
+#define FW_VERSION 1027
 
-// Replace with your network credentials
-#define ssid      ""
-#define password  ""
 unsigned long previousWFMillis = 0;
 const long checkWFInterval = 60000;
 
@@ -91,10 +89,6 @@ void setup() {
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
-/*  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }*/
   for (int i = 0; i < 60; i++){
     if ( WiFi.status() != WL_CONNECTED ){
       delay(500);
@@ -108,10 +102,6 @@ void setup() {
     }
   }
   // Print local IP address and start web server
-/*  Serial.println("");
-  Serial.println("WiFi connected.");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());*/
   server.begin();
 
   execOTA();  // Execute OTA Update
@@ -129,6 +119,7 @@ void setup() {
 
   // Fan
   pinMode(ledPin, OUTPUT);
+  domoSwitchUpdate(0, 40);
 
   // Valves
   pinMode(kran1close, OUTPUT);
@@ -314,6 +305,7 @@ void loop(){
       if(timerVal){
         digitalWrite(ledPin, LOW);
         Serial.println("Led OFF");
+        domoSwitchUpdate(0, 40);
       }
       forceRun = false;
     }
@@ -321,7 +313,7 @@ void loop(){
 
   // Memory Usage
   memoryUsage();
-
+  
   // Check wifi
   checkWIFI();
 
@@ -528,33 +520,13 @@ void execMQsens(int patternGazVal){
       if((!forceRun) and (!isFanOn)){
         digitalWrite(ledPin, HIGH);
         isFanOn = true;
-        if (client.connect(domoserver.c_str(), domoport)) {
-          client.print("GET /json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=70");
-          client.println(" HTTP/1.1");
-          client.print("Host: ");
-          client.print(domoserver);
-          client.print(":");
-          client.println(domoport);
-          client.println("Cache-Control: no-cache");
-          client.println("Connection: close");
-          client.println();
-        }
+        domoSwitchUpdate(70, 40);
       }
     } else if(datchikGaz <= patternGazVal){ //turn fan off
       if((!forceRun) and (isFanOn)){
         digitalWrite(ledPin, LOW);
         isFanOn = false;
-        if (client.connect(domoserver.c_str(), domoport)) {
-          client.print("GET /json.htm?type=command&param=switchlight&idx=40&switchcmd=Set%20Level&level=0");
-          client.println(" HTTP/1.1");
-          client.print("Host: ");
-          client.print(domoserver);
-          client.print(":");
-          client.println(domoport);
-          client.println("Cache-Control: no-cache");
-          client.println("Connection: close");
-          client.println();
-        }
+        domoSwitchUpdate(0, 40);
       }
     }
   }
@@ -566,18 +538,7 @@ void memoryUsage(){
   if (currentMemMillis - previousMemMillis >= interval){
     previousMemMillis = currentMemMillis;
     int freeMemory = ESP.getFreeHeap();
-    if (client.connect(domoserver.c_str(), domoport)) {
-      client.print("GET /json.htm?type=command&param=udevice&idx=48&svalue=");
-      client.print(freeMemory);
-      client.println(" HTTP/1.1");
-      client.print("Host: ");
-      client.print(domoserver);
-      client.print(":");
-      client.println(domoport);
-      client.println("Cache-Control: no-cache");
-      client.println("Connection: close");
-      client.println();
-    }
+    domoUpdate(freeMemory, 48);
   }
 }
 
@@ -589,6 +550,55 @@ void checkWIFI(){
     if (WiFi.status() != WL_CONNECTED){
       WiFi.disconnect();
       WiFi.begin(ssid, password);
+      for (int i = 0; i < 60; i++){
+        if ( WiFi.status() != WL_CONNECTED ){
+          delay(500);
+          Serial.print(".");
+        } else {
+          Serial.println("");
+          Serial.println("WiFi connected.");
+          Serial.print("IP address: ");
+          Serial.println(WiFi.localIP());
+          break;
+        }
+      }
+      server.stop();
+      delay(500);
+      server.begin();
     }
+  }
+}
+
+void domoUpdate(int dataVar, int idxVar){
+  if (client.connect(domoserver.c_str(), domoport)) {
+    client.print("GET /json.htm?type=command&param=udevice&idx=");
+    client.print(idxVar);
+    client.print("&svalue=");
+    client.print(dataVar);
+    client.println(" HTTP/1.1");
+    client.print("Host: ");
+    client.print(domoserver);
+    client.print(":");
+    client.println(domoport);
+    client.println("Cache-Control: no-cache");
+    client.println("Connection: close");
+    client.println();
+  }
+}
+
+void domoSwitchUpdate(int dataVar, int idxVar){
+  if (client.connect(domoserver.c_str(), domoport)) {
+    client.print("GET /json.htm?type=command&param=switchlight&idx=");
+    client.print(idxVar);
+    client.print("&switchcmd=Set%20Level&level=");
+    client.print(dataVar);
+    client.println(" HTTP/1.1");
+    client.print("Host: ");
+    client.print(domoserver);
+    client.print(":");
+    client.println(domoport);
+    client.println("Cache-Control: no-cache");
+    client.println("Connection: close");
+    client.println();
   }
 }
