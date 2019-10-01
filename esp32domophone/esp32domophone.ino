@@ -15,7 +15,7 @@
 #include "HardwareSerial.h"
 #include "auth.h"
 
-#define FW_VERSION 1026
+#define FW_VERSION 1029
 
 // For OTA update
 long contentLength = 0;
@@ -58,13 +58,13 @@ bool callIsActive = false;
 bool nightMode = false;
 int callsCount = 0;
 unsigned long callFirstTimeMillis = 0;
-const long callInterval = 3000;
+const long callInterval = 15000;
 bool callFirstTime = true;
 bool forceNightMode = false;
 bool forceDayMode = false;
 
 // Domoticz
-String domoserver = "192.168.1.159";
+String domoserver = "192.168.1.44";
 #define domoport 8080
 
 // PZEM-004t
@@ -115,7 +115,7 @@ void setup() {
   execNtpUpdate();
 
   domoSWToOff();
-  domoUpdate(callsCount, 47); // Send current count to domoticz
+  domoUpdate(callsCount, 31); // Send current count to domoticz
 
   // PZEM
   pzemPort.begin(9600);
@@ -192,17 +192,17 @@ void loop() {
   // Detect calling
   callIsActive = digitalRead(callDetect); // Check if calling
   if(callIsActive){
-/*    unsigned long currentCCMillis = millis(); // Take current millis
+    unsigned long currentCCMillis = millis(); // Take current millis
     if(callFirstTime){ // Check if first signal
       callsCount++; // Add +1 to call counter 
-      domoUpdate(callsCount, 47); // Send current count to domoticz */
+      domoUpdate(callsCount, 31); // Send current count to domoticz 
       pushbullet((String)"Call to domophone initiated");
-/*      callFirstTimeMillis = currentCCMillis; 
+      callFirstTimeMillis = currentCCMillis; 
       callFirstTime = false; // Uncheck first signal
     }
     if(currentCCMillis - callFirstTimeMillis >= callInterval){
       callFirstTime = true; // If timer is over, return checking for first signal
-    }*/
+    }
   }
   if((nightMode) or (forceNightMode)){
     digitalWrite(dfRelay, HIGH);
@@ -231,7 +231,7 @@ void loop() {
   // Reset calls count to 0 at 0:00
   if(currenthour == 0 & currentmin == 0 & currentsec == 0){
     callsCount = 0;
-    domoUpdate(callsCount, 47);
+    domoUpdate(callsCount, 31);
   }
 
   // Power stats
@@ -406,7 +406,7 @@ void momentOpen(){
 
 void domoSWToOff(){
   if (client.connect(domoserver.c_str(), domoport)) {
-    client.print("GET /json.htm?type=command&param=switchlight&idx=46&switchcmd=Set%20Level&level=0");
+    client.print("GET /json.htm?type=command&param=switchlight&idx=30&switchcmd=Set%20Level&level=0");
     client.println(" HTTP/1.1");
     client.print("Host: ");
     client.print(domoserver);
@@ -470,7 +470,7 @@ void powerStats(){
     uint8_t result = node.readInputRegisters(0x0000, 9);
     if (result == node.ku8MBSuccess){
       float voltage = node.getResponseBuffer(0x0000) / 10.0;
-      domoUpdate(voltage, 49);
+      domoUpdate(voltage, 32);
 
       uint16_t tempWord;
 
@@ -479,14 +479,14 @@ void powerStats(){
       tempWord |= node.getResponseBuffer(0x0003);       //LowByte
       tempWord |= node.getResponseBuffer(0x0004) << 8;  //highByte
       power = tempWord / 10.0;
-      domoUpdate(power, 52);
+      domoUpdate(power, 34);
 
       float current;
       tempWord = 0x0000;
       tempWord |= node.getResponseBuffer(0x0001);       //LowByte
       tempWord |= node.getResponseBuffer(0x0002) << 8;  //highByte
       current = tempWord / 1000.0;
-      domoUpdate(current, 50);
+      domoUpdate(current, 33);
    
 /*    uint16_t energy;
     tempWord = 0x0000;
@@ -495,7 +495,7 @@ void powerStats(){
     energy = tempWord;*/
     
       int frequency = node.getResponseBuffer(0x0007);
-      domoUpdate(frequency/10, 53);
+      domoUpdate(frequency/10, 35);
    
 //    Serial.print(node.getResponseBuffer(0x0008)); // pf
 
