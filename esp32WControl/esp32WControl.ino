@@ -11,7 +11,7 @@
 #include <PCF8591.h>
 #include "auth.h"
 
-#define FW_VERSION 1027
+#define FW_VERSION 1029
 
 unsigned long previousWFMillis = 0;
 const long checkWFInterval = 60000;
@@ -79,7 +79,7 @@ unsigned long currentForceRunMillis = 0;
 #define kran2open  13
 
 // Domoticz
-String domoserver = "192.168.1.159";
+String domoserver = "192.168.1.44";
 #define domoport 8080
 
 void setup() {
@@ -119,7 +119,7 @@ void setup() {
 
   // Fan
   pinMode(ledPin, OUTPUT);
-  domoSwitchUpdate(0, 40);
+  domoSwitchUpdate(0, 24);
 
   // Valves
   pinMode(kran1close, OUTPUT);
@@ -503,7 +503,7 @@ void execMQsens(int patternGazVal){
     previousMillis = currentMillis;
     int datchikGaz = pcf8591.analogRead(AIN2);
     if (client.connect(domoserver.c_str(), domoport)) {
-      client.print("GET /json.htm?type=command&param=udevice&idx=45&svalue=");
+      client.print("GET /json.htm?type=command&param=udevice&idx=27&svalue=");
       client.print(datchikGaz);
       client.print(".");
       client.print(patternGazVal);
@@ -520,13 +520,13 @@ void execMQsens(int patternGazVal){
       if((!forceRun) and (!isFanOn)){
         digitalWrite(ledPin, HIGH);
         isFanOn = true;
-        domoSwitchUpdate(70, 40);
+        domoSwitchUpdate(70, 24);
       }
     } else if(datchikGaz <= patternGazVal){ //turn fan off
       if((!forceRun) and (isFanOn)){
         digitalWrite(ledPin, LOW);
         isFanOn = false;
-        domoSwitchUpdate(0, 40);
+        domoSwitchUpdate(0, 24);
       }
     }
   }
@@ -538,7 +538,7 @@ void memoryUsage(){
   if (currentMemMillis - previousMemMillis >= interval){
     previousMemMillis = currentMemMillis;
     int freeMemory = ESP.getFreeHeap();
-    domoUpdate(freeMemory, 48);
+    domoUpdate(freeMemory, 36);
   }
 }
 

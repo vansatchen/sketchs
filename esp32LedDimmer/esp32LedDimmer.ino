@@ -5,20 +5,17 @@
 #include <WiFi.h>
 #include <Update.h>
 #include <EEPROM.h>
-#include "BluetoothSerial.h"
+//#include "BluetoothSerial.h"
+#include "auth.h"
 
-#define FW_VERSION 1000
+#define FW_VERSION 1001
 
-// Replace with your network credentials
-#define ssid      ""
-#define password  ""
-
-BluetoothSerial ESP_BT;
+//BluetoothSerial ESP_BT;
 
 // For OTA update
 long contentLength = 0;
 bool isValidContentType = false;
-String host = "";
+String host = "192.168.1.159";
 #define port 80
 #define phpfile "/UpgradeFW/update.php"
 #define bin "esp32LedDimmer.bin"
@@ -43,17 +40,18 @@ int ledState = 255;
 #define brightness         0
 #define fadeState          10
 
-String incoming;  // BT variable
+//String incoming;  // BT variable
 
 void ledcAnalogWrite(uint8_t channel, uint32_t value, uint32_t valueMax = 255) {
   uint32_t duty = (8191 / valueMax) * min(value, valueMax);  // calculate duty, 8191 from 2 ^ 13 - 1
   ledcWrite(channel, duty);  // write duty to LEDC
 }
 
-void setup() {
-//  Serial.begin(115200);
+// Domoticz
+String domoserver = "192.168.1.44";
+#define domoport 8080
 
-  // read the last LED state from flash memory
+void setup() {
   EEPROM.begin(EEPROM_SIZE);
   ledState = EEPROM.read(0);
 
@@ -66,39 +64,30 @@ void setup() {
     ledcAnalogWrite(LEDC_CHANNEL_0, rise);
     delay(4);
   }
-//  Serial.print("Led Last State = ");
-//  Serial.println(ledState);
   
   // Connect to Wi-Fi network with SSID and password
-//  Serial.print("Connecting to ");
-//  Serial.println(ssid);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-//    Serial.print(".");
   }
-  // Print local IP address and start web server
-/*  Serial.println("");
-  Serial.println("WiFi connected.");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());*/
+
   server.begin();
 
-  ESP_BT.begin("");  // BT
+//  ESP_BT.begin("uguLed1");  // BT
 
   execOTA();  // Execute OTA Update
+
+  domoUpdate(1, 14);
 }
 
 void loop(){
   WiFiClient client = server.available();   // Listen for incoming clients
 
   if (client) {                             // If a new client connects,
-//    Serial.println("New Client.");          // print a message out in the serial port
     String currentLine = "";                // make a String to hold incoming data from the client
     while (client.connected()) {            // loop while the client's connected
       if (client.available()) {             // if there's bytes to read from the client,
         char c = client.read();             // read a byte, then
-//        Serial.write(c);                    // print it out the serial monitor
         header += c;
         if (c == '\n') {                    // if the byte is a newline character
           // if the current line is blank, you got two newline characters in a row.
@@ -113,11 +102,9 @@ void loop(){
             
             // turns the GPIOs pwm. Use variables like off, fade, rise or pwm=N, where N: 1-255
             if (header.indexOf("GET /?off") >= 0) {
-//              Serial.println("Light off");
               ledcAnalogWrite(LEDC_CHANNEL_0, 0);
             }
             if (header.indexOf("GET /?fade") >= 0) {
-//              Serial.println("Light fading");
               for (int i=ledState; i >= fadeState; i-=1){
                 Serial.println(i);
                 ledcAnalogWrite(LEDC_CHANNEL_0, i);
@@ -125,38 +112,22 @@ void loop(){
               }
             }
             if (header.indexOf("GET /?rise") >= 0) {
-//              Serial.println("Light rising");
               ledcAnalogWrite(LEDC_CHANNEL_0, ledState);
             }
             if (header.indexOf("?pwm=") >= 0) {
               header.replace("GET /?pwm=", "");
               header.replace(" HTTP/1.1", "");
-//              Serial.println(header);
               int pwmval = atoi(header.c_str());
               if (pwmval >= 255) {
                 pwmval = 255;
               }
               if (pwmval <= 255 && pwmval > 0) {
-//                Serial.println(pwmval);
                 ledcAnalogWrite(LEDC_CHANNEL_0, pwmval);
                 ledState = pwmval;
-//                Serial.println("State changed");
                 EEPROM.write(0, pwmval);
                 EEPROM.commit();
-//                Serial.println("State saved in flash memory");
-//              } else {
-//                Serial.println("PWM string not recognised");
               }
             }
-            
-            // Display the HTML web page
-/*            client.println("<!DOCTYPE html><html>");
-            client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-            client.println("<link rel=\"icon\" href=\"data:,\">");
-           
-            // Web Page Heading
-            client.println("<body><h1>ESP32 Web Server</h1>");
-            client.println("</body></html>");*/
             
             // The HTTP response ends with another blank line
             client.println();
@@ -173,7 +144,7 @@ void loop(){
     client.stop();  // Close the connection
   }
   // BT
-  while(ESP_BT.available()){
+/*  while(ESP_BT.available()){
     incoming = "";
     for(int i = 0; i < 4; i++) {
       incoming.concat(ESP_BT.read());
@@ -187,26 +158,22 @@ void loop(){
     if (incoming == "114105115101"){ // rise
       ledcAnalogWrite(LEDC_CHANNEL_0, ledState);
     }
-  }
+  }*/
 }
 
 // OTA Logic 
 void execOTA() {
-//  Serial.println("Connecting to: " + String(host));
   if (client.connect(host.c_str(), port)) {
     // Connection Succeed. Fecthing the bin
-//    Serial.println("Fetching Bin: " + String(bin));
 
     // Get the contents of the bin file
     client.print(String("GET ") + phpfile + "?file=" + bin + "&" + "FW_VERSION=" + FW_VERSION + " HTTP/1.1\r\n" +
                  "Host: " + host + "\r\n" +
                  "Cache-Control: no-cache\r\n" +
                  "Connection: close\r\n\r\n");
-
     unsigned long timeout = millis();
     while (client.available() == 0) {
       if (millis() - timeout > 5000) {
-//        Serial.println("Client Timeout !");
         client.stop();
         return;
       }
@@ -229,7 +196,6 @@ void execOTA() {
       // Check if the HTTP Response is 200 else break and Exit Update
       if (line.startsWith("HTTP/1.1")) {
         if (line.indexOf("200") < 0) {
-//          Serial.println("Got a non 200 status code from server. Exiting OTA Update.");
           break;
         }
       }
@@ -237,25 +203,17 @@ void execOTA() {
       // extract headers here. Start with content length
       if (line.startsWith("Content-Length: ")) {
         contentLength = atol((getHeaderValue(line, "Content-Length: ")).c_str());
-//        Serial.println("Got " + String(contentLength) + " bytes from server");
       }
 
       // Next, the content type
       if (line.startsWith("Content-Type: ")) {
         String contentType = getHeaderValue(line, "Content-Type: ");
-//        Serial.println("Got " + contentType + " payload.");
         if (contentType == "application/octet-stream") {
           isValidContentType = true;
         }
       }
     }
-//  } else {
-    // Connect to server failed
-//    Serial.println("Connection to " + String(host) + " failed. Please check your setup");
   }
-
-  // Check what is the contentLength and if content type is `application/octet-stream`
-//  Serial.println("contentLength : " + String(contentLength) + ", isValidContentType : " + String(isValidContentType));
 
   // check contentLength and content type
   if (contentLength && isValidContentType) {
@@ -264,34 +222,36 @@ void execOTA() {
 
     // If yes, begin
     if (canBegin) {
-//      Serial.println("Begin OTA. This may take 2 - 5 mins to complete. Things might be quite for a while.. Patience!");
       // No activity would appear on the Serial monitor
       size_t written = Update.writeStream(client);
 
-/*      if (written == contentLength) {
-        Serial.println("Written : " + String(written) + " successfully");
-      } else {
-        Serial.println("Written only : " + String(written) + "/" + String(contentLength) + ". Retry?" );
-      }*/
-
       if (Update.end()) {
-//        Serial.println("OTA done!");
         if (Update.isFinished()) {
-//          Serial.println("Update successfully completed. Rebooting.");
           ESP.restart();
-/*        } else {
-          Serial.println("Update not finished? Something went wrong!");*/
         }
-/*      } else {
-        Serial.println("Error Occurred. Error #: " + String(Update.getError()));*/
       }
     } else {
       // not enough space to begin OTA. Understand the partitions and space availability
-//      Serial.println("Not enough space to begin OTA");
       client.flush();
     }
   } else {
-//    Serial.println("There was no content in the response");
     client.flush();
+  }
+}
+
+void domoUpdate(int dataVar, int idxVar){
+  if (client.connect(domoserver.c_str(), domoport)) {
+    client.print("GET /json.htm?type=command&param=udevice&idx=");
+    client.print(idxVar);
+    client.print("&nvalue=");
+    client.print(dataVar);
+    client.println(" HTTP/1.1");
+    client.print("Host: ");
+    client.print(domoserver);
+    client.print(":");
+    client.println(domoport);
+    client.println("Cache-Control: no-cache");
+    client.println("Connection: close");
+    client.println();
   }
 }
