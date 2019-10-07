@@ -15,7 +15,7 @@
 #include "HardwareSerial.h"
 #include "auth.h"
 
-#define FW_VERSION 1029
+#define FW_VERSION 1030
 
 // For OTA update
 long contentLength = 0;
@@ -58,10 +58,11 @@ bool callIsActive = false;
 bool nightMode = false;
 int callsCount = 0;
 unsigned long callFirstTimeMillis = 0;
-const long callInterval = 15000;
+const long callInterval = 1000;
 bool callFirstTime = true;
 bool forceNightMode = false;
 bool forceDayMode = false;
+unsigned long currentCCMillis = 0;
 
 // Domoticz
 String domoserver = "192.168.1.44";
@@ -191,8 +192,8 @@ void loop() {
   
   // Detect calling
   callIsActive = digitalRead(callDetect); // Check if calling
-  if(callIsActive){
-    unsigned long currentCCMillis = millis(); // Take current millis
+/*  if(callIsActive){
+    currentCCMillis = millis(); // Take current millis
     if(callFirstTime){ // Check if first signal
       callsCount++; // Add +1 to call counter 
       domoUpdate(callsCount, 31); // Send current count to domoticz 
@@ -203,7 +204,9 @@ void loop() {
     if(currentCCMillis - callFirstTimeMillis >= callInterval){
       callFirstTime = true; // If timer is over, return checking for first signal
     }
-  }
+  }*/
+  incomingCall();
+  
   if((nightMode) or (forceNightMode)){
     digitalWrite(dfRelay, HIGH);
     callIsActive = digitalRead(callDetect); // Check if calling
@@ -502,6 +505,24 @@ void powerStats(){
 //    int alarmStatus = node.getResponseBuffer(0x0009); // alarm?
     } else {
       Serial.println("Failed to read modbus");  
+    }
+  }
+}
+
+void incomingCall(){
+  if(callIsActive){
+    currentCCMillis = millis();
+    if(callFirstTime){
+      callsCount++;
+      domoUpdate(callsCount, 31);
+      pushbullet((String)"Call to domophone initiated");
+      callFirstTimeMillis = currentCCMillis;
+      callFirstTime = false;
+    }
+  }
+  if(currentCCMillis - callFirstTimeMillis >= callInterval){
+    if(!callIsActive){
+      callFirstTime = true;
     }
   }
 }
