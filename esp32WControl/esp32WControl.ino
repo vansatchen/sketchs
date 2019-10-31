@@ -9,9 +9,10 @@
 #include <Wire.h>
 #include <RtcDS3231.h>
 #include <PCF8591.h>
+#include "paj7620.h"
 #include "auth.h"
 
-#define FW_VERSION 1029
+#define FW_VERSION 1031
 
 unsigned long previousWFMillis = 0;
 const long checkWFInterval = 60000;
@@ -82,6 +83,11 @@ unsigned long currentForceRunMillis = 0;
 String domoserver = "192.168.1.44";
 #define domoport 8080
 
+// Gesture sensor
+#define GES_REACTION_TIME    300
+#define GES_ENTRY_TIME      500
+#define GES_QUIT_TIME      800
+
 void setup() {
   Serial.begin(115200);
   
@@ -135,6 +141,9 @@ void setup() {
   pcf8591.begin();
   delay(1000);
   patternGaz = pcf8591.analogRead(AIN2);
+
+  // Gesture sensor
+  paj7620Init();
 }
 
 void loop(){
@@ -316,6 +325,9 @@ void loop(){
   
   // Check wifi
   checkWIFI();
+
+  // Read gestures
+  gestures();
 
   delay(10);
 }
@@ -600,5 +612,28 @@ void domoSwitchUpdate(int dataVar, int idxVar){
     client.println("Cache-Control: no-cache");
     client.println("Connection: close");
     client.println();
+  }
+}
+
+void gestures(){
+  uint8_t data = 0, data1 = 0, error;
+  error = paj7620ReadReg(0x43, 1, &data);
+  if (!error){
+    switch (data){
+      case GES_UP_FLAG:
+        forceRun = true;
+        timerInt = 900000;
+        timerVal = true;
+        currentForceRunMillis = millis();
+        break;
+      case GES_DOWN_FLAG:
+        forceRun = true;
+        timerInt = 900000;
+        timerVal = false;
+        currentForceRunMillis = millis();
+        break;
+      default:
+        break;
+    }
   }
 }
