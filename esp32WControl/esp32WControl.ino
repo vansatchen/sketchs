@@ -12,7 +12,7 @@
 #include "paj7620.h"
 #include "auth.h"
 
-#define FW_VERSION 1031
+#define FW_VERSION 1032
 
 unsigned long previousWFMillis = 0;
 const long checkWFInterval = 60000;
@@ -321,7 +321,7 @@ void loop(){
   }
 
   // Memory Usage
-  memoryUsage();
+//  memoryUsage();
   
   // Check wifi
   checkWIFI();
