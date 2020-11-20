@@ -12,7 +12,7 @@
 #include "paj7620.h"
 #include "auth.h"
 
-#define FW_VERSION 1032
+#define FW_VERSION 1033
 
 unsigned long previousWFMillis = 0;
 const long checkWFInterval = 60000;
@@ -53,11 +53,11 @@ RtcDS3231<TwoWire> rtcObject(Wire);
 
 // MQ-2
 unsigned long previousMillis = 0;
-const long interval = 5000;
+const long interval = 10000;
 bool isHour4mq = false;
 int patternGaz;
 #define ledPin 2
-#define gazDiff 5
+#define gazDiff 10
 bool isFanOn = false;
 
 // Memory
@@ -534,7 +534,7 @@ void execMQsens(int patternGazVal){
         isFanOn = true;
         domoSwitchUpdate(70, 24);
       }
-    } else if(datchikGaz <= patternGazVal){ //turn fan off
+    } else if(datchikGaz <= patternGazVal - 1){ //turn fan off
       if((!forceRun) and (isFanOn)){
         digitalWrite(ledPin, LOW);
         isFanOn = false;
