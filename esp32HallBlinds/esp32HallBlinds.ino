@@ -9,7 +9,7 @@
 #include "auth.h"
 
 #define blindsNum  3
-#define FW_VERSION 1000
+#define FW_VERSION 1011
 
 // For OTA update
 long contentLength = 0;
@@ -64,6 +64,14 @@ int led[] = {32, 33, 25};
 String domoserver = "192.168.1.44";
 #define domoport 8080
 
+// LightSensor
+int sensorPin = A6;
+unsigned long previousMillisLS = 0;
+int intervalSensorCheck = 5000;
+int updatePerMin = 12;
+int countDomoUpdate = 0;
+bool sun = false;
+
 void setup() {
   EEPROM.begin(blindsNum);
   for (int i = 0; i < blindsNum; i++) {
@@ -108,7 +116,7 @@ void loop() {
       stepReverse(motor, 8);
       counter[motor]--;
     }
-    if (enc1.isPress()){
+    if (enc1.isPress()){ // leds on
       if (motor == 0) {
         motor = 1;
         digitalWrite(led[0], LOW);
@@ -168,61 +176,19 @@ void loop() {
               header.replace("GET /?blinds1=", "");
               header.replace(" HTTP/1.1", "");
               int blinds1Val = atoi(header.c_str());
-              blinds1Val = constrain(blinds1Val, 0, 50);
-              int checkBlinds1Val = blinds1Val - counter[0];
-              if (checkBlinds1Val > 0) {
-                stepForward(0, checkBlinds1Val * 8);
-                EEPROM.write(0, blinds1Val);
-                EEPROM.commit();
-                counter[0] = blinds1Val;
-              }
-              if (checkBlinds1Val < 0) {
-                checkBlinds1Val = checkBlinds1Val * -1;
-                stepReverse(0, checkBlinds1Val * 8);
-                EEPROM.write(0, blinds1Val);
-                EEPROM.commit();
-                counter[0] = blinds1Val;
-              }
+              blinds1Move(blinds1Val);
             }
             if (header.indexOf("?blinds2=") >= 0) {
               header.replace("GET /?blinds2=", "");
               header.replace(" HTTP/1.1", "");
               int blinds2Val = atoi(header.c_str());
-              blinds2Val = constrain(blinds2Val, 0, 50);
-              int checkBlinds2Val = blinds2Val - counter[1];
-              if (checkBlinds2Val > 0) {
-                stepForward(1, checkBlinds2Val * 8);
-                EEPROM.write(1, blinds2Val);
-                EEPROM.commit();
-                counter[1] = blinds2Val;
-              }
-              if (checkBlinds2Val < 0) {
-                checkBlinds2Val = checkBlinds2Val * -1;
-                stepReverse(1, checkBlinds2Val * 8);
-                EEPROM.write(1, blinds2Val);
-                EEPROM.commit();
-                counter[1] = blinds2Val;
-              }
+              blinds2Move(blinds2Val);
             }
             if (header.indexOf("?blinds3=") >= 0) {
               header.replace("GET /?blinds3=", "");
               header.replace(" HTTP/1.1", "");
               int blinds3Val = atoi(header.c_str());
-              blinds3Val = constrain(blinds3Val, 0, 50);
-              int checkBlinds3Val = blinds3Val - counter[2];
-              if (checkBlinds3Val > 0) {
-                stepForward(2, checkBlinds3Val * 8);
-                EEPROM.write(2, blinds3Val);
-                EEPROM.commit();
-                counter[2] = blinds3Val;
-              }
-              if (checkBlinds3Val < 0) {
-                checkBlinds3Val = checkBlinds3Val * -1;
-                stepReverse(2, checkBlinds3Val * 8);
-                EEPROM.write(2, blinds3Val);
-                EEPROM.commit();
-                counter[2] = blinds3Val;
-              }
+              blinds3Move(blinds3Val);
             }
             
             // The HTTP response ends with another blank line
@@ -239,6 +205,8 @@ void loop() {
     header = "";  // Clear the header variable
     client.stop();  // Close the connection
   }
+
+  checkLightSensor(); // check LightSensor
 }
 
 // OTA Logic 
@@ -323,6 +291,60 @@ void isr() { // Encoder lookup
   enc1.tick();
 }
 
+void blinds1Move(int blinds1Val){
+  blinds1Val = constrain(blinds1Val, 0, 50);
+  int checkBlinds1Val = blinds1Val - counter[0];
+  if (checkBlinds1Val > 0) {
+    stepForward(0, checkBlinds1Val * 8);
+    EEPROM.write(0, blinds1Val);
+    EEPROM.commit();
+    counter[0] = blinds1Val;
+  }
+  if (checkBlinds1Val < 0) {
+    checkBlinds1Val = checkBlinds1Val * -1;
+    stepReverse(0, checkBlinds1Val * 8);
+    EEPROM.write(0, blinds1Val);
+    EEPROM.commit();
+    counter[0] = blinds1Val;
+  }
+}
+
+void blinds2Move(int blinds2Val){
+  blinds2Val = constrain(blinds2Val, 0, 50);
+  int checkBlinds2Val = blinds2Val - counter[1];
+  if (checkBlinds2Val > 0) {
+    stepForward(1, checkBlinds2Val * 8);
+    EEPROM.write(1, blinds2Val);
+    EEPROM.commit();
+    counter[1] = blinds2Val;
+  }
+  if (checkBlinds2Val < 0) {
+    checkBlinds2Val = checkBlinds2Val * -1;
+    stepReverse(1, checkBlinds2Val * 8);
+    EEPROM.write(1, blinds2Val);
+    EEPROM.commit();
+    counter[1] = blinds2Val;
+  }
+}
+
+void blinds3Move(int blinds3Val){
+  blinds3Val = constrain(blinds3Val, 0, 50);
+  int checkBlinds3Val = blinds3Val - counter[2];
+  if (checkBlinds3Val > 0) {
+    stepForward(2, checkBlinds3Val * 8);
+    EEPROM.write(2, blinds3Val);
+    EEPROM.commit();
+    counter[2] = blinds3Val;
+  }
+  if (checkBlinds3Val < 0) {
+    checkBlinds3Val = checkBlinds3Val * -1;
+    stepReverse(2, checkBlinds3Val * 8);
+    EEPROM.write(2, blinds3Val);
+    EEPROM.commit();
+    counter[2] = blinds3Val;
+  }
+}
+
 void stepForward(int motorVal, int stepsData){
   for (int motoStep = 0; motoStep < stepsData; motoStep++) {
     for (int phase = 0; phase < 8; phase++) {
@@ -372,5 +394,44 @@ void blinking(int blinkNum){
     delay(100);
     for (int i = 0; i < blindsNum; i++) digitalWrite(led[i], LOW);
     delay(100);
+  }
+}
+
+void checkLightSensor(){
+  unsigned long currentMillisLS = millis();
+  if (currentMillisLS - previousMillisLS >= intervalSensorCheck){
+    previousMillisLS = currentMillisLS;
+    countDomoUpdate++;
+    int sensorVar = analogRead(sensorPin);
+    if (sensorVar >= 3500){ // Domoupdate every 10 minute at night
+      intervalSensorCheck = 60000;
+      updatePerMin = 10;
+    } else {
+      intervalSensorCheck = 5000;
+      updatePerMin = 12;
+    }
+    bool updateDomo = false;
+    if (sensorVar < 1200 && sun == false){ // if sun is opening, update domo, move blinds
+      sun = true;
+      updateDomo = true;
+      blinds1Move(37);
+      blinds2Move(37);
+      blinds3Move(37);
+      intervalSensorCheck = 60000; // Domoupdate every 10 minute at sun
+      updatePerMin = 5;
+    }
+    if (sensorVar > 1500 && sun == true){ // if sun is closing, update domo, move blinds
+      sun = false;
+      updateDomo = true;
+      blinds1Move(23);
+      blinds2Move(23);
+      blinds3Move(23);
+      intervalSensorCheck = 5000;
+      updatePerMin = 12;
+    }
+    if (countDomoUpdate >= updatePerMin || updateDomo == true){ // update domo every minute
+      countDomoUpdate = 0;
+      domoUpdate(sensorVar, 36);
+    }
   }
 }
