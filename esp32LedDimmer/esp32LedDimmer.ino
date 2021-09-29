@@ -8,7 +8,7 @@
 //#include "BluetoothSerial.h"
 #include "auth.h"
 
-#define FW_VERSION 1001
+#define FW_VERSION 1002
 
 //BluetoothSerial ESP_BT;
 
@@ -78,6 +78,7 @@ void setup() {
   execOTA();  // Execute OTA Update
 
   domoUpdate(1, 14);
+  domoUpdate(1, 29);
 }
 
 void loop(){
