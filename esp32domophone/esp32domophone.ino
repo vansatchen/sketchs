@@ -15,7 +15,10 @@
 #include "HardwareSerial.h"
 #include "auth.h"
 
-#define FW_VERSION 1030
+#define FW_VERSION 1031
+
+unsigned long previousWFMillis = 0;
+const long checkWFInterval = 60000;
 
 // For OTA update
 long contentLength = 0;
@@ -239,6 +242,9 @@ void loop() {
 
   // Power stats
   powerStats();
+
+  // Check wifi
+  checkWIFI();
   
 //  delay(10);
 }
@@ -375,6 +381,33 @@ void execNtpUpdate(){
     } else {
       Serial.println("Failed to obtain time");
       delay(1000);
+    }
+  }
+}
+
+// Check wifi is connected
+void checkWIFI(){
+  unsigned long currentWFMillis = millis();
+  if (currentWFMillis - previousWFMillis >= checkWFInterval){
+    previousWFMillis = currentWFMillis;
+    if (WiFi.status() != WL_CONNECTED){
+      WiFi.disconnect();
+      WiFi.begin(ssid, password);
+      for (int i = 0; i < 60; i++){
+        if ( WiFi.status() != WL_CONNECTED ){
+          delay(500);
+          Serial.print(".");
+        } else {
+          Serial.println("");
+          Serial.println("WiFi connected.");
+          Serial.print("IP address: ");
+          Serial.println(WiFi.localIP());
+          break;
+        }
+      }
+      server.stop();
+      delay(500);
+      server.begin();
     }
   }
 }
