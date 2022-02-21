@@ -9,7 +9,10 @@
 #include "auth.h"
 
 #define blindsNum  3
-#define FW_VERSION 1011
+#define FW_VERSION 1012
+
+unsigned long previousWFMillis = 0;
+const long checkWFInterval = 60000;
 
 // For OTA update
 long contentLength = 0;
@@ -205,6 +208,9 @@ void loop() {
     header = "";  // Clear the header variable
     client.stop();  // Close the connection
   }
+
+  // Check wifi
+  checkWIFI();
 
   checkLightSensor(); // check LightSensor
 }
@@ -432,6 +438,33 @@ void checkLightSensor(){
     if (countDomoUpdate >= updatePerMin || updateDomo == true){ // update domo every minute
       countDomoUpdate = 0;
       domoUpdate(sensorVar, 36);
+    }
+  }
+}
+
+// Check wifi is connected
+void checkWIFI(){
+  unsigned long currentWFMillis = millis();
+  if (currentWFMillis - previousWFMillis >= checkWFInterval){
+    previousWFMillis = currentWFMillis;
+    if (WiFi.status() != WL_CONNECTED){
+      WiFi.disconnect();
+      WiFi.begin(ssid, password);
+      for (int i = 0; i < 60; i++){
+        if ( WiFi.status() != WL_CONNECTED ){
+          delay(500);
+          Serial.print(".");
+        } else {
+          Serial.println("");
+          Serial.println("WiFi connected.");
+          Serial.print("IP address: ");
+          Serial.println(WiFi.localIP());
+          break;
+        }
+      }
+      server.stop();
+      delay(500);
+      server.begin();
     }
   }
 }
